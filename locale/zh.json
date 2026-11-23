@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "API-HUB 接口调试台",
+    "description": "在侧栏打开一个 Postman 风格的接口调试台：导入 Postman Collection，经本机代理发请求（没有跨域限制），所有集合存在同一个本地 JSON 文件里；同一份页面也能单独打开当兜底。"
+  }
+}

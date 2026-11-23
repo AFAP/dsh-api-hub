@@ -1,0 +1,55 @@
+{
+  "name": "dsh-api-hub",
+  "version": "1.0.0",
+  "description": "A Postman-style API console inside DeepSeek Harness: import Postman collections, send requests through a local proxy with no CORS limits, and keep every collection in one local JSON file.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "engines": {
+    "dsh": "^0.2.3-alpha.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AFAP/dsh-api-hub.git"
+  },
+  "scripts": {
+    "preview": "node scripts/preview.mjs"
+  },
+  "files": [
+    "lib",
+    "web",
+    "cordis.patch.yml",
+    "locale",
+    "examples",
+    "icon.svg",
+    "screenshot",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "api",
+    "postman",
+    "http-client",
+    "rest"
+  ],
+  "license": "MIT"
+}

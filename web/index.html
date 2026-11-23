@@ -1,0 +1,4387 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>API-HUB · 接口调试台</title>
+<style>
+/* ───────────────────────── 主题令牌 ───────────────────────── */
+:root{
+  --bg:#ffffff; --bg2:#f7f8fa; --bg3:#eef0f4; --bg-hover:rgba(16,24,40,.05);
+  --fg:#101828; --fg2:#475467; --fg3:#8b93a1;
+  --line:#e4e7ec; --line2:#d0d5dd;
+  --accent:#4f46e5; --accent2:#4338ca; --accent-wash:rgba(79,70,229,.09);
+  --ok:#0a8f5b; --warn:#b45309; --bad:#d92d20; --info:#175cd3;
+  --m-get:#0a8f5b; --m-post:#b45309; --m-put:#175cd3; --m-patch:#7839ee; --m-del:#d92d20; --m-other:#667085;
+  --code-bg:#f7f8fa; --k:#a626a4; --s:#0a7f4b; --n:#b45309; --l:#175cd3;
+  --mono:ui-monospace,SFMono-Regular,"Cascadia Mono","Consolas","Liberation Mono","Menlo",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --r:7px;
+}
+html[data-theme="dark"]{
+  --bg:#0e1116; --bg2:#151a21; --bg3:#1c2230; --bg-hover:rgba(255,255,255,.06);
+  --fg:#e6e9ef; --fg2:#a9b2c0; --fg3:#727c8d;
+  --line:#242b36; --line2:#333c4a;
+  --accent:#8f8cfb; --accent2:#a5a2fd; --accent-wash:rgba(143,140,251,.14);
+  --ok:#3ecf8e; --warn:#f0a25a; --bad:#ff6b6b; --info:#6aa6ff;
+  --m-get:#3ecf8e; --m-post:#f0a25a; --m-put:#6aa6ff; --m-patch:#b18cf8; --m-del:#ff6b6b; --m-other:#8b93a1;
+  --code-bg:#11151b; --k:#d98cf0; --s:#7ee2a8; --n:#f0b072; --l:#7fb4ff;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--sans);font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+button{font:inherit;color:inherit}
+input,select,textarea{font:inherit;color:inherit}
+::selection{background:var(--accent-wash)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--fg3);border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+.app{display:flex;flex-direction:column;height:100%;min-height:0}
+
+/* ───────────────────────── 顶栏 ───────────────────────── */
+.topbar{display:flex;align-items:center;gap:10px;padding:0 12px;height:46px;flex:none;
+  border-bottom:1px solid var(--line);background:var(--bg2)}
+.brand{display:flex;align-items:center;gap:8px;flex:none;user-select:none}
+.logo{width:24px;height:24px;border-radius:7px;background:linear-gradient(145deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.brand b{font-size:13.5px;letter-spacing:.4px}
+.brand .ver{font-size:10px;color:var(--fg3);border:1px solid var(--line2);border-radius:4px;padding:0 4px;line-height:14px}
+.storeline{display:flex;align-items:center;gap:6px;min-width:0;margin-left:6px;padding-left:10px;border-left:1px solid var(--line)}
+.path{font-family:var(--mono);font-size:11px;color:var(--fg3);max-width:46vw;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;cursor:pointer;border-radius:4px;
+  padding:2px 4px;margin-left:-4px}
+.path:hover{background:var(--bg-hover);color:var(--fg2)}
+.path[data-dirty="1"]{color:var(--warn)}
+.grow{flex:1}
+.tools{display:flex;align-items:center;gap:6px;flex:none}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:28px;padding:0 10px;
+  border-radius:var(--r);border:1px solid var(--line2);background:var(--bg);color:var(--fg2);
+  cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s,color .12s}
+.btn:hover{background:var(--bg3);color:var(--fg);border-color:var(--fg3)}
+.btn:active{transform:translateY(.5px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.icon{width:28px;padding:0;font-size:13px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+
+/* ───────────────────────── 主体 ───────────────────────── */
+.main{display:flex;flex:1;min-height:0}
+.side{width:var(--side-w,240px);flex:none;display:flex;flex-direction:column;min-height:0;
+  border-right:1px solid var(--line);background:var(--bg2)}
+.sideDrag{width:5px;flex:none;cursor:col-resize;background:transparent;position:relative;z-index:6}
+.sideDrag:hover,.sideDrag.on{background:var(--accent)}
+.sideTop{display:flex;align-items:center;gap:6px;padding:8px;flex:none}
+.searchWrap{position:relative;flex:1;min-width:0}
+.searchWrap svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--fg3);pointer-events:none}
+.searchWrap input{width:100%;height:28px;padding:0 8px 0 27px;border-radius:var(--r);
+  border:1px solid var(--line2);background:var(--bg);outline:none}
+.searchWrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+
+.list{flex:1;min-height:0;overflow:auto;padding:2px 6px 16px}
+.sideFoot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;
+  flex:none;border-top:1px solid var(--line);font-size:11px;color:var(--fg3)}
+.link{border:0;background:none;padding:0;color:var(--fg3);cursor:pointer;font-size:11px;text-decoration:underline dotted}
+.link:hover{color:var(--accent)}
+
+/* 集合行 */
+.collection{display:flex;align-items:center;gap:5px;padding:5px 6px;margin-top:4px;border-radius:5px;
+  cursor:pointer;color:var(--fg);font-size:12.5px;user-select:none;font-weight:600}
+.collection:hover{background:var(--bg-hover)}
+.collection .caret{width:12px;text-align:center;color:var(--fg3);font-size:9px;transition:transform .12s}
+.collection[data-open="0"] .caret{transform:rotate(-90deg)}
+.collection .cname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.collection .ccount{font-size:10px;color:var(--fg3);font-weight:400;font-variant-numeric:tabular-nums}
+.collection .facts{display:none;gap:1px;flex:none}
+.collection:hover .facts{display:flex}
+.collection.dragging,.req.dragging{opacity:.4}
+.collection.drop-before,.req.drop-before{box-shadow:inset 0 2px 0 0 var(--accent)}
+.collection.drop-after,.req.drop-after{box-shadow:inset 0 -2px 0 0 var(--accent)}
+.collection.drop-into,.folder.drop-into{background:var(--accent-wash);box-shadow:inset 0 0 0 1px var(--accent)}
+.list.drop-end{box-shadow:inset 0 -2px 0 0 var(--accent)}
+
+.folder{display:flex;align-items:center;gap:4px;padding:4px 6px;margin-top:2px;border-radius:5px;
+  cursor:pointer;color:var(--fg2);font-size:12px;user-select:none}
+.folder:hover{background:var(--bg-hover)}
+.folder .caret{width:12px;text-align:center;color:var(--fg3);font-size:9px;transition:transform .12s}
+.folder[data-open="0"] .caret{transform:rotate(-90deg)}
+.folder .fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.folder .fcount{font-size:10px;color:var(--fg3);font-variant-numeric:tabular-nums}
+.ftag{flex:none;font-size:9px;line-height:14px;padding:0 4px;border-radius:3px;color:var(--fg3);
+  border:1px solid var(--line2);background:var(--bg)}
+.folder .facts{display:none;gap:2px;flex:none}
+.folder:hover .facts{display:flex}
+
+.req{display:flex;align-items:center;gap:7px;width:100%;text-align:left;border:0;background:none;
+  padding:5px 6px;border-radius:5px;cursor:pointer;color:var(--fg);min-width:0}
+.req:hover{background:var(--bg-hover)}
+.req[data-on="1"]{background:var(--accent-wash)}
+.req[data-on="1"] .rname{color:var(--accent);font-weight:600}
+.method{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:-.2px;flex:none;
+  width:36px;line-height:14px;text-align:center;border-radius:3px;opacity:.95;
+  border:1px solid color-mix(in srgb, currentColor 45%, transparent)}
+.method[data-m="GET"]{color:var(--m-get)} .method[data-m="POST"]{color:var(--m-post)}
+.method[data-m="PUT"]{color:var(--m-put)} .method[data-m="PATCH"]{color:var(--m-patch)}
+.method[data-m="DELETE"]{color:var(--m-del)} .method[data-m="HEAD"],
+.method[data-m="OPTIONS"]{color:var(--m-other)}
+.rname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.rtag{flex:none;font-size:9.5px;color:var(--fg3);border:1px solid var(--line2);border-radius:9px;
+  padding:0 5px;line-height:14px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.req .facts{display:none;gap:1px;flex:none}
+.req:hover .facts,.req[data-on="1"] .facts{display:flex}
+.fact{border:0;background:none;padding:2px 3px;border-radius:3px;color:var(--fg3);cursor:pointer;font-size:11px;line-height:1}
+.fact:hover{background:var(--bg3);color:var(--fg)}
+.fact.del:hover{color:var(--bad)}
+
+.empty{display:flex;flex-direction:column;gap:10px;align-items:stretch;padding:22px 16px;text-align:center;
+  color:var(--fg3);font-size:12px;line-height:1.7}
+.empty b{color:var(--fg2);font-size:13px;display:block;margin-bottom:2px}
+.empty .btns{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.empty kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line2);border-bottom-width:2px;
+  border-radius:4px;padding:0 4px;background:var(--bg)}
+
+/* ───────────────────────── 右侧 ───────────────────────── */
+.pane{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;background:var(--bg)}
+.paneEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;
+  gap:8px;color:var(--fg3);font-size:12.5px;text-align:center}
+.paneEmpty .big{font-size:34px;opacity:.28;margin-bottom:2px}
+
+.reqHead{flex:none;padding:12px 16px 8px;border-bottom:1px solid var(--line)}
+.reqHead .row1{display:flex;align-items:center;gap:8px}
+.nameInput{flex:1;min-width:0;height:30px;padding:0 9px;border:1px solid transparent;border-radius:var(--r);
+  background:transparent;font-size:14px;font-weight:600;outline:none}
+.nameInput:hover{border-color:var(--line2)}
+.nameInput:focus{border-color:var(--accent);background:var(--bg);box-shadow:0 0 0 3px var(--accent-wash)}
+.urlRow{display:flex;align-items:center;gap:6px;margin-top:8px}
+.methodSel{height:34px;padding:0 6px;border-radius:var(--r);border:1px solid var(--line2);background:var(--bg);
+  font-family:var(--mono);font-size:11.5px;font-weight:700;cursor:pointer;outline:none;flex:none}
+.methodSel[data-m="GET"]{color:var(--m-get)} .methodSel[data-m="POST"]{color:var(--m-post)}
+.methodSel[data-m="PUT"]{color:var(--m-put)} .methodSel[data-m="PATCH"]{color:var(--m-patch)}
+.methodSel[data-m="DELETE"]{color:var(--m-del)}
+.urlInput{flex:1;min-width:0;height:34px;padding:0 10px;border-radius:var(--r);border:1px solid var(--line2);
+  background:var(--bg);font-family:var(--mono);font-size:12.5px;outline:none}
+.urlInput:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.urlInput::placeholder{color:var(--fg3);font-family:var(--sans)}
+.sendBtn{height:34px;padding:0 18px;border-radius:var(--r);border:1px solid var(--accent);background:var(--accent);
+  color:#fff;font-weight:600;cursor:pointer;flex:none;display:inline-flex;align-items:center;gap:6px}
+.sendBtn:hover:not(:disabled){background:var(--accent2)}
+.sendBtn:disabled{opacity:.6;cursor:progress}
+.urlHint{margin-top:6px;font-family:var(--mono);font-size:10.5px;color:var(--fg3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.urlHint b{color:var(--warn);font-weight:400}
+.urlHint .ok{color:var(--fg3);cursor:copy}
+.urlHint .ok:hover{color:var(--fg2);text-decoration:underline dotted}
+
+.tabs{display:flex;align-items:center;gap:2px;padding:0 12px;flex:none;border-bottom:1px solid var(--line);
+  background:var(--bg2);height:34px;overflow:auto}
+.tab{border:0;background:none;padding:0 9px;height:33px;border-bottom:2px solid transparent;color:var(--fg2);
+  cursor:pointer;font-size:12px;white-space:nowrap}
+.tab:hover{color:var(--fg)}
+.tab[data-on="1"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.tab .cnt{font-size:10px;color:var(--fg3);margin-left:2px}
+.tab .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:4px;vertical-align:middle}
+.tab .dot.warn{background:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 22%,transparent)}
+.warnText{color:var(--warn)}
+.warnBox{display:flex;align-items:center;gap:10px;margin:0 0 8px;padding:7px 10px;border-radius:6px;
+  font-size:11.5px;line-height:1.6;color:var(--warn);
+  background:color-mix(in srgb,var(--warn) 9%,transparent);
+  border:1px solid color-mix(in srgb,var(--warn) 26%,transparent)}
+.warnBox .grow{flex:1;min-width:0}
+.warnBox .btn{flex:none;height:26px;font-size:11.5px}
+
+.tabBody{flex:0 1 auto;max-height:44%;overflow:auto;padding:10px 16px 12px;min-height:74px}
+.kvHead{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--fg3);padding:0 2px 4px;
+  font-variant-numeric:tabular-nums}
+.kvRow{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.kvRow input[type=checkbox]{flex:none;margin:0;accent-color:var(--accent);cursor:pointer}
+.kvRow .k{flex:0 0 30%;min-width:70px} .kvRow .v{flex:1;min-width:70px}
+.kvRow input[type=text],.kvRow textarea{height:27px;padding:0 8px;border-radius:5px;border:1px solid var(--line);
+  background:var(--bg);font-family:var(--mono);font-size:11.5px;outline:none;min-width:0;width:100%}
+.kvRow input[type=text]:focus,.kvRow textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
+.kvRow .del{flex:none;border:0;background:none;color:var(--fg3);cursor:pointer;padding:2px 4px;border-radius:4px;line-height:1}
+.kvRow .del:hover{color:var(--bad);background:var(--bg3)}
+.kvRow[data-off="1"] input[type=text]{opacity:.5;text-decoration:line-through}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field>label{font-size:11px;color:var(--fg3)}
+.field input[type=text],.field input[type=password],.field select{height:30px;padding:0 9px;border-radius:var(--r);
+  border:1px solid var(--line2);background:var(--bg);outline:none;font-family:var(--mono);font-size:12px}
+.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.fieldRow{display:flex;gap:8px}
+.fieldRow>*{flex:1;min-width:0}
+
+.bodyTools{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--r);overflow:hidden;flex:none}
+.seg button{border:0;background:none;padding:0 9px;height:25px;font-size:11.5px;color:var(--fg2);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[data-on="1"]{background:var(--accent-wash);color:var(--accent);font-weight:600}
+.codeArea{width:100%;min-height:150px;resize:vertical;padding:9px 10px;border-radius:var(--r);
+  border:1px solid var(--line2);background:var(--code-bg);font-family:var(--mono);font-size:12px;
+  line-height:1.65;outline:none;white-space:pre;overflow:auto;tab-size:2}
+.codeArea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.hint{font-size:11px;color:var(--fg3);line-height:1.7}
+.hint.warn{color:var(--warn)}
+.noteArea{width:100%;min-height:110px;resize:vertical;padding:9px 10px;border-radius:var(--r);
+  border:1px solid var(--line2);background:var(--bg);font-size:12.5px;outline:none;line-height:1.7}
+.noteArea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+
+/* 响应区 */
+.resp{flex:1;min-height:120px;display:flex;flex-direction:column;border-top:1px solid var(--line);min-width:0}
+.pane.respFocus .tabBody{display:none}
+.pane.respFocus .resp{min-height:0}
+.respBar{display:flex;align-items:center;gap:8px;padding:0 12px;height:34px;flex:none;background:var(--bg2);
+  border-bottom:1px solid var(--line);font-size:11.5px;color:var(--fg3);overflow:auto}
+.status{font-family:var(--mono);font-weight:700;font-size:12px;padding:1px 6px;border-radius:4px}
+.status[data-k="2"]{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.status[data-k="3"]{color:var(--info);background:color-mix(in srgb,var(--info) 12%,transparent)}
+.status[data-k="4"]{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.status[data-k="5"]{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.status[data-k="0"]{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.meta{font-variant-numeric:tabular-nums;white-space:nowrap}
+.via{font-size:10px;border:1px solid var(--line2);border-radius:9px;padding:0 6px;line-height:15px;white-space:nowrap}
+.respBar .seg{margin-left:auto}
+.respBar .seg button{height:24px}
+.respBody{flex:1;min-height:0;overflow:auto;background:var(--code-bg)}
+.respBody pre{margin:0;padding:12px 14px;font-family:var(--mono);font-size:11.5px;line-height:1.7;
+  white-space:pre-wrap;word-break:break-word;tab-size:2}
+.respBody pre.plain{white-space:pre-wrap}
+.respEmpty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--fg3);font-size:12px;
+  flex-direction:column;gap:6px;background:var(--bg)}
+.respErr{margin:12px 14px;padding:10px 12px;border-radius:var(--r);border-left:3px solid var(--bad);
+  background:color-mix(in srgb,var(--bad) 8%,transparent);color:var(--bad);font-size:12px;line-height:1.7;white-space:pre-wrap}
+.hdrTable{width:100%;border-collapse:collapse;font-size:11.5px}
+.hdrTable td{padding:4px 14px;border-bottom:1px solid var(--line);vertical-align:top;font-family:var(--mono);
+  word-break:break-all}
+.hdrTable td:first-child{color:var(--accent);width:34%;white-space:nowrap}
+.j-k{color:var(--k)} .j-s{color:var(--s)} .j-n{color:var(--n)} .j-l{color:var(--l)}
+
+/* 模态 */
+.modalHost{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:rgba(9,13,20,.42);backdrop-filter:blur(1.5px);padding:24px}
+.modalHost[hidden]{display:none}
+.modal{width:min(560px,100%);max-height:86vh;display:flex;flex-direction:column;background:var(--bg);
+  border-radius:11px;border:1px solid var(--line2);box-shadow:0 18px 48px rgba(0,0,0,.28);overflow:hidden}
+.modal.wide{width:min(760px,100%)}
+.modalHead{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);flex:none}
+.modalHead b{font-size:13.5px}
+.modalHead .x{margin-left:auto;border:0;background:none;color:var(--fg3);cursor:pointer;font-size:16px;
+  line-height:1;padding:3px 6px;border-radius:5px}
+.modalHead .x:hover{background:var(--bg3);color:var(--fg)}
+.modalBody{padding:14px 16px;overflow:auto;font-size:12.5px;line-height:1.75}
+.modalFoot{display:flex;justify-content:flex-end;gap:8px;padding:11px 16px;border-top:1px solid var(--line);
+  background:var(--bg2);flex:none}
+.modalBody p{margin:0 0 8px}
+.modalBody code{font-family:var(--mono);font-size:11.5px;background:var(--bg3);padding:1px 4px;border-radius:3px}
+.modalBody .textInput{width:100%;height:32px;padding:0 9px;border-radius:var(--r);border:1px solid var(--line2);
+  background:var(--bg);outline:none;font-family:var(--mono);font-size:12px}
+.modalBody .textInput:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.modalBody h4{margin:16px 0 6px;font-size:12px;color:var(--fg2);letter-spacing:.3px}
+.modalBody h4:first-child{margin-top:0}
+.modalBody ul{margin:6px 0;padding-left:18px}
+.modalBody li{margin:3px 0}
+.kbdList{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center}
+.kbdList kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line2);border-bottom-width:2px;
+  border-radius:4px;padding:1px 5px;background:var(--bg2);white-space:nowrap;justify-self:start}
+.pathBox{display:flex;align-items:center;gap:10px;margin:10px 0 6px;padding:8px 10px;border-radius:var(--r);
+  border:1px solid var(--line2);background:var(--bg2)}
+.pathBox code{flex:1;min-width:0;font-family:var(--mono);font-size:11.5px;background:none;padding:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left}
+.pathBox .btn{flex:none;height:26px;font-size:11.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:24px;padding:0 9px;border-radius:12px;border:1px solid var(--line2);background:var(--bg2);
+  color:var(--fg2);font:inherit;font-size:11px;cursor:pointer;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Toast */
+.toasts{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:80;display:flex;
+  flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{max-width:70vw;padding:8px 14px;border-radius:20px;background:#1f2733;color:#fff;font-size:12px;
+  box-shadow:0 6px 22px rgba(0,0,0,.28);animation:tin .18s ease}
+.toast.bad{background:#a1251c}
+.toast.ok{background:#0b6b46}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.spin{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.banner{flex:none;display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:11.5px;
+  background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--warn);
+  border-bottom:1px solid color-mix(in srgb,var(--warn) 24%,transparent)}
+.banner .grow{flex:1}
+.banner button{border:1px solid currentColor;background:none;color:inherit;border-radius:5px;
+  padding:2px 8px;cursor:pointer;font-size:11px}
+
+/* ───────────────────────── JSON 树 ───────────────────────── */
+.treeTools{display:flex;align-items:center;gap:12px;padding:5px 14px;font-size:11px;
+  border-bottom:1px solid var(--line);background:var(--bg2);position:sticky;top:0;z-index:2}
+.treeTools .grow{flex:1}
+.jt{padding:8px 12px 26px;font-family:var(--mono);font-size:11.5px;line-height:1.65}
+.jt-row{display:flex;align-items:center;gap:4px;border-radius:3px;padding:1px 4px 1px 0;
+  min-height:19px;line-height:18px}
+.jt-toggle{cursor:pointer}
+.jt-toggle:hover{background:var(--bg-hover)}
+.jt-caret{flex:none;width:11px;color:var(--fg3);font-size:8px;text-align:center;user-select:none}
+.jt-caret-empty{visibility:hidden}
+.jt-key{color:var(--k);word-break:break-all}
+.jt-key-idx{color:var(--fg3)}
+.jt-colon{color:var(--fg3);margin-right:2px}
+.jt-str{color:var(--s);word-break:break-all;white-space:pre-wrap}
+.jt-num{color:var(--n)}
+.jt-bool{color:var(--l)}
+.jt-null{color:var(--fg3);font-style:italic}
+.jt-other{color:var(--fg2)}
+.jt-preview{color:var(--fg3);font-size:11px}
+.jt-count{margin:0 3px;color:var(--fg3)}
+.jt-kids{display:block}
+.jt-kids[hidden]{display:none}
+.jt-more{color:var(--accent);cursor:pointer;font-size:11px;padding:2px 4px}
+.jt-more:hover{text-decoration:underline}
+
+/* ───────────────────────── 表单行 / 文件 ───────────────────────── */
+.formRow .typeBtn{flex:none;height:27px;padding:0 7px;border-radius:5px;border:1px solid var(--line2);
+  background:var(--bg);color:var(--fg3);font:inherit;font-size:10.5px;cursor:pointer;min-width:38px}
+.formRow .typeBtn.on{color:var(--accent);border-color:var(--accent);background:var(--accent-wash)}
+.formRow .typeBtn:hover{color:var(--fg)}
+.filePick{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+.filePick .btn{height:27px;flex:none;font-size:11px}
+.filePick .fileLabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:820px){
+  .storeline .path{max-width:30vw}
+  .brand .ver{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h9M4 12h6M4 17h4"/><path d="M15 13l3 3 4-4"/>
+        </svg>
+      </span>
+      <b>API-HUB</b><span class="ver" id="modeTag">单网页</span>
+    </div>
+    <div class="storeline">
+      <button class="btn" id="btnOpen" title="打开本地 JSON">打开</button>
+      <button class="btn" id="btnSave" title="保存到当前文件（Ctrl+S）">保存</button>
+      <span class="path" id="pathLabel">未绑定文件</span>
+    </div>
+    <div class="grow"></div>
+    <div class="tools">
+      <button class="btn" id="btnImport" title="导入 Postman Collection v2.1 / API-HUB JSON">导入</button>
+      <button class="btn" id="btnExport" title="导出为 Postman Collection / JSON">导出</button>
+      <button class="btn icon" id="btnVars" title="全局变量">{{ }}</button>
+      <button class="btn icon" id="btnTheme" title="切换主题">◐</button>
+      <button class="btn icon" id="btnHelp" title="帮助与设置">?</button>
+    </div>
+  </header>
+  <div class="main">
+    <aside class="side">
+      <div class="sideTop">
+        <div class="searchWrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21" stroke-linecap="round"/>
+          </svg>
+          <input id="q" placeholder="搜索接口 / URL / 方法" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn icon" id="btnNewReq" title="新建接口（Ctrl+N）">＋</button>
+        <button class="btn icon" id="btnNewFolder" title="新建文件夹">▤</button>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="sideFoot">
+        <span id="countLabel">0 个集合</span>
+        <span style="display:flex;gap:10px">
+          <button class="link" id="btnNewCollection" title="新建一个空集合">＋ 集合</button>
+          <button class="link" id="btnCollapse">折叠</button>
+        </span>
+      </div>
+    </aside>
+    <div class="sideDrag" id="sideDrag" title="拖动调整宽度（双击恢复默认）"></div>
+    <section class="pane" id="pane"></section>
+  </div>
+</div>
+<div class="modalHost" id="modalHost" hidden></div>
+<div class="toasts" id="toasts"></div>
+<input type="file" id="fileInput" accept=".json,application/json" multiple hidden />
+
+<script>
+(function () {
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════
+   0. 常量与小工具
+   ═══════════════════════════════════════════════════════════════════ */
+
+const HUB_SCHEMA = 'api-hub/2';
+const HOST_BASE = '/api-hub/api';
+const LS_KEY = {
+  path: 'apihub.dataPath',
+  theme: 'apihub.theme',
+  auto: 'apihub.autosave',
+  open: 'apihub.openFolders',
+  openCollections: 'apihub.openCollections',
+  sel: 'apihub.selected',
+  side: 'apihub.sideWidth'
+};
+const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+const MAX_BODY = 8 * 1024 * 1024;
+const DEFAULT_TIMEOUT = 60;
+
+const $ = (sel, root) => (root || document).querySelector(sel);
+
+function uid(p) {
+  return (p || 'x') + '_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+}
+function nowIso() { return new Date().toISOString(); }
+function str(v) { return v === null || v === undefined ? '' : String(v); }
+function clamp(n, lo, hi) { return Math.min(Math.max(n, lo), hi); }
+
+function addKids(el, kids) {
+  for (const k of kids) {
+    if (k === null || k === undefined || k === false || k === '') continue;
+    if (Array.isArray(k)) addKids(el, k);
+    else if (k instanceof Node) el.appendChild(k);
+    else el.appendChild(document.createTextNode(String(k)));
+  }
+}
+function h(tag, props) {
+  const el = document.createElement(tag);
+  if (props && typeof props === 'object') {
+    for (const k in props) {
+      const v = props[k];
+      if (v === null || v === undefined || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'html') el.innerHTML = v;
+      else if (k === 'style') { if (typeof v === 'string') el.style.cssText = v; else Object.assign(el.style, v); }
+      else if (k === 'dataset') Object.assign(el.dataset, v);
+      else if (k === 'ref') { if (typeof v === 'function') v(el); }
+      else if (k === 'value') el.value = v;
+      else if (k === 'checked') el.checked = !!v;
+      else if (k === 'disabled') el.disabled = !!v;
+      else if (k === 'selected') el.selected = !!v;
+      else if (k.slice(0, 2) === 'on' && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+      else el.setAttribute(k, v === true ? '' : String(v));
+    }
+  }
+  for (let i = 2; i < arguments.length; i++) addKids(el, [arguments[i]]);
+  return el;
+}
+function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+
+function toast(msg, kind) {
+  const box = $('#toasts');
+  const node = h('div', { class: 'toast' + (kind ? ' ' + kind : '') , text: msg });
+  box.appendChild(node);
+  setTimeout(() => { node.style.transition = 'opacity .2s'; node.style.opacity = '0'; }, 2200);
+  setTimeout(() => node.remove(), 2500);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    try {
+      const ta = h('textarea', { style: 'position:fixed;left:-9999px;top:0' });
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (__) { return false; }
+  }
+}
+
+function downloadText(name, text) {
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: name });
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
+}
+
+function fmtBytes(n) {
+  if (!Number.isFinite(n)) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1024 / 1024).toFixed(2) + ' MB';
+}
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const p = (x) => String(x).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   1. 数据模型
+   ═══════════════════════════════════════════════════════════════════ */
+
+function emptyHub() {
+  return {
+    schema: HUB_SCHEMA,
+    name: '我的接口',
+    variables: [],
+    collections: [],
+    folders: [],
+    requests: [],
+    createdAt: nowIso(),
+    updatedAt: null
+  };
+}
+
+function emptyCollection(patch) {
+  return Object.assign({
+    id: uid('c'),
+    name: '新建集合',
+    description: '',
+    variables: [],
+    createdAt: nowIso(),
+    updatedAt: nowIso()
+  }, patch || {});
+}
+
+const kv = (key, value) => ({ key: str(key), value: str(value), enabled: true });
+
+function normalizeKvList(list) {
+  return Array.isArray(list)
+    ? list.filter((p) => p && typeof p === 'object').map((p) => ({
+      key: str(p.key), value: str(p.value), enabled: p.enabled !== false
+    }))
+    : [];
+}
+
+function normalizeFormList(list) {
+  return Array.isArray(list)
+    ? list.filter((p) => p && typeof p === 'object').map((p) => ({
+      id: str(p.id) || uid('row'),
+      key: str(p.key),
+      value: str(p.value),
+      enabled: p.enabled !== false,
+      type: p.type === 'file' ? 'file' : 'text',
+      fileName: str(p.fileName),
+      contentType: str(p.contentType)
+    }))
+    : [];
+}
+
+function emptyRequest(patch) {
+  return Object.assign({
+    id: uid('r'),
+    name: '新建接口',
+    collectionId: null,
+    folderId: null,
+    method: 'GET',
+    url: '',
+    params: [],
+    headers: [],
+    body: { mode: 'none', raw: '', language: 'json', form: [] },
+    auth: { type: 'none', token: '', username: '', password: '', key: '', value: '', addTo: 'header' },
+    note: '',
+    timeout: 0,
+    tlsInsecure: false,
+    createdAt: nowIso(),
+    updatedAt: nowIso()
+  }, patch || {});
+}
+
+function normalizeRequest(raw, folderIds, pickCollection) {
+  const r = emptyRequest();
+  if (!raw || typeof raw !== 'object') return r;
+  r.id = typeof raw.id === 'string' && raw.id ? raw.id : uid('r');
+  r.name = str(raw.name) || '未命名接口';
+  r.collectionId = typeof pickCollection === 'function' ? pickCollection(raw.collectionId) : str(raw.collectionId);
+  r.folderId = raw.folderId && (!folderIds || folderIds.has(String(raw.folderId))) ? String(raw.folderId) : null;
+  r.method = METHODS.indexOf(String(raw.method || '').toUpperCase()) >= 0 ? String(raw.method).toUpperCase() : 'GET';
+  r.url = str(raw.url);
+  r.params = normalizeKvList(raw.params);
+  r.headers = normalizeKvList(raw.headers);
+  const b = raw.body && typeof raw.body === 'object' ? raw.body : {};
+  r.body = {
+    mode: ['none', 'raw', 'urlencoded', 'formdata', 'graphql'].indexOf(b.mode) >= 0 ? b.mode : 'none',
+    raw: str(b.raw),
+    language: str(b.language) || 'json',
+    form: normalizeFormList(b.form)
+  };
+  const a = raw.auth && typeof raw.auth === 'object' ? raw.auth : {};
+  r.auth = {
+    type: ['none', 'bearer', 'basic', 'apikey'].indexOf(a.type) >= 0 ? a.type : 'none',
+    token: str(a.token), username: str(a.username), password: str(a.password),
+    key: str(a.key), value: str(a.value), addTo: a.addTo === 'query' ? 'query' : 'header',
+    inherit: a.inherit === true
+  };
+  r.note = str(raw.note);
+  r.timeout = Number(raw.timeout) > 0 ? Number(raw.timeout) : 0;
+  r.tlsInsecure = raw.tlsInsecure === true;
+  r.createdAt = str(raw.createdAt) || nowIso();
+  r.updatedAt = str(raw.updatedAt) || r.createdAt;
+  return r;
+}
+
+/**
+ * 一份数据文件装多个集合。
+ * 读到的是老格式（没有 collections 字段）时，整体收进一个集合，不丢东西。
+ */
+function normalizeHub(raw) {
+  const hub = emptyHub();
+  if (!raw || typeof raw !== 'object') return hub;
+  hub.name = str(raw.name) || hub.name;
+  hub.createdAt = str(raw.createdAt) || hub.createdAt;
+  hub.updatedAt = str(raw.updatedAt) || null;
+
+  const collectionIds = new Set();
+  for (const c of Array.isArray(raw.collections) ? raw.collections : []) {
+    if (!c || typeof c !== 'object') continue;
+    let id = str(c.id);
+    if (!id || collectionIds.has(id)) id = uid('c');
+    collectionIds.add(id);
+    hub.collections.push({
+      id: id,
+      name: str(c.name) || '未命名集合',
+      description: str(c.description),
+      variables: normalizeKvList(c.variables),
+      createdAt: str(c.createdAt) || nowIso(),
+      updatedAt: str(c.updatedAt) || nowIso()
+    });
+  }
+  if (!hub.collections.length) {
+    hub.collections.push(emptyCollection({ name: str(raw.name) || '我的接口' }));
+  }
+  const defaultCid = hub.collections[0].id;
+  const pickCollection = (cid) => (cid && collectionIds.has(str(cid)) ? str(cid) : defaultCid);
+
+  const seen = new Set();
+  const folders = Array.isArray(raw.folders) ? raw.folders : [];
+  for (const f of folders) {
+    if (!f || typeof f !== 'object') continue;
+    let id = str(f.id);
+    if (!id || seen.has(id)) id = uid('f');
+    seen.add(id);
+    hub.folders.push({
+      id: id,
+      name: str(f.name) || '未命名分组',
+      parentId: null,
+      parentRaw: str(f.parentId),
+      collectionId: str(f.collectionId) ? pickCollection(f.collectionId) : ''
+    });
+  }
+  for (const f of hub.folders) {
+    f.parentId = f.parentRaw && seen.has(f.parentRaw) && f.parentRaw !== f.id ? f.parentRaw : null;
+    delete f.parentRaw;
+  }
+  // 断开环形父子关系
+  const byId = new Map(hub.folders.map((f) => [f.id, f]));
+  for (const f of hub.folders) {
+    let cur = f.parentId, guard = 0;
+    while (cur && guard++ < 64) {
+      if (cur === f.id) { f.parentId = null; break; }
+      cur = (byId.get(cur) || {}).parentId || null;
+    }
+  }
+  const reqs = Array.isArray(raw.requests) ? raw.requests : [];
+  for (const r of reqs) hub.requests.push(normalizeRequest(r, seen, pickCollection));
+
+  // 分组缺 collectionId 时，跟着它下面的接口走
+  const folderCid = new Map();
+  for (const r of hub.requests) {
+    if (r.folderId && !folderCid.has(r.folderId)) folderCid.set(r.folderId, r.collectionId);
+  }
+  for (const f of hub.folders) {
+    if (!f.collectionId) f.collectionId = folderCid.get(f.id) || defaultCid;
+  }
+  for (const r of hub.requests) {
+    if (!r.collectionId) r.collectionId = defaultCid;
+  }
+  // 接口挂在别的集合的分组下面时，跟着分组走 —— 否则它在树上会看不见
+  const folderById = new Map(hub.folders.map((f) => [f.id, f]));
+  for (const r of hub.requests) {
+    if (!r.folderId) continue;
+    const folder = folderById.get(r.folderId);
+    if (folder && folder.collectionId && folder.collectionId !== r.collectionId) {
+      r.collectionId = folder.collectionId;
+    }
+  }
+
+  hub.variables = normalizeKvList(raw.variables);
+  return hub;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. Postman Collection v2.1 兼容
+   ═══════════════════════════════════════════════════════════════════ */
+
+function segText(x) {
+  if (typeof x === 'string') return x;
+  if (x && typeof x === 'object' && typeof x.value === 'string') return x.value;
+  return '';
+}
+
+function postmanUrlText(url) {
+  if (!url) return '';
+  if (typeof url === 'string') return url;
+  if (typeof url !== 'object') return '';
+  if (typeof url.raw === 'string' && url.raw.trim()) return url.raw.trim();
+  const proto = url.protocol ? String(url.protocol).replace(/:$/, '') + '://' : '';
+  const host = Array.isArray(url.host) ? url.host.map(segText).join('.') : segText(url.host);
+  const path = Array.isArray(url.path) ? url.path.map(segText).join('/') : segText(url.path);
+  return proto + host + (path ? '/' + path : '');
+}
+
+function decodePart(s) {
+  try { return decodeURIComponent(String(s).replace(/\+/g, ' ')); }
+  catch (_) { return String(s); }
+}
+
+/** 把 `a=1&b=2` 拆成参数表；URL 里的 query 一律搬进参数表，发送时再拼回去。 */
+function splitUrl(raw) {
+  let s = str(raw).trim();
+  const hashAt = s.indexOf('#');
+  if (hashAt >= 0) s = s.slice(0, hashAt);
+  const qAt = s.indexOf('?');
+  if (qAt < 0) return { base: s, params: [] };
+  const base = s.slice(0, qAt);
+  const params = [];
+  for (const part of s.slice(qAt + 1).split('&')) {
+    if (!part) continue;
+    const eq = part.indexOf('=');
+    params.push({
+      key: decodePart(eq < 0 ? part : part.slice(0, eq)),
+      value: eq < 0 ? '' : decodePart(part.slice(eq + 1)),
+      enabled: true
+    });
+  }
+  return { base: base, params: params };
+}
+
+function postmanAuth(auth) {
+  if (!auth || typeof auth !== 'object' || !auth.type || auth.type === 'noauth') return { type: 'none' };
+  const list = Array.isArray(auth[auth.type]) ? auth[auth.type] : [];
+  const get = (k) => {
+    const hit = list.find((x) => x && x.key === k);
+    return hit ? str(hit.value) : '';
+  };
+  if (auth.type === 'bearer') return { type: 'bearer', token: get('token') };
+  if (auth.type === 'basic') return { type: 'basic', username: get('username'), password: get('password') };
+  if (auth.type === 'apikey') {
+    return { type: 'apikey', key: get('key'), value: get('value'), addTo: get('in') === 'query' ? 'query' : 'header' };
+  }
+  return { type: 'none' };
+}
+
+function postmanBody(body) {
+  const out = { mode: 'none', raw: '', language: 'json', form: [] };
+  if (!body || typeof body !== 'object') return out;
+  if (body.mode === 'raw') {
+    out.mode = 'raw';
+    out.raw = str(body.raw);
+    const lang = body.options && body.options.raw && body.options.raw.language;
+    out.language = lang ? String(lang).toLowerCase() : guessLanguage(out.raw);
+    return out;
+  }
+  if (body.mode === 'urlencoded') {
+    out.mode = 'urlencoded';
+    out.form = (Array.isArray(body.urlencoded) ? body.urlencoded : [])
+      .filter((x) => x && typeof x === 'object')
+      .map((x) => ({ id: uid('row'), key: str(x.key), value: str(x.value), enabled: x.disabled !== true, type: 'text' }));
+    return out;
+  }
+  if (body.mode === 'formdata') {
+    out.mode = 'formdata';
+    out.form = (Array.isArray(body.formdata) ? body.formdata : [])
+      .filter((x) => x && typeof x === 'object')
+      .map((x) => ({
+        id: uid('row'),
+        key: str(x.key),
+        value: str(x.value === undefined ? x.src : x.value),
+        fileName: x.type === 'file' ? str(x.src || x.value).split(/[\\/]/).pop() : '',
+        enabled: x.disabled !== true,
+        type: x.type === 'file' ? 'file' : 'text'
+      }));
+    return out;
+  }
+  if (body.mode === 'graphql') {
+    const g = body.graphql || {};
+    let vars = {};
+    try { vars = g.variables ? JSON.parse(g.variables) : {}; } catch (_) { vars = {}; }
+    out.mode = 'raw';
+    out.language = 'json';
+    out.raw = JSON.stringify({ query: str(g.query), variables: vars }, null, 2);
+    return out;
+  }
+  if (body.mode === 'file') {
+    out.mode = 'none';
+    out.raw = '';
+    return out;
+  }
+  return out;
+}
+
+function guessLanguage(text) {
+  const s = str(text).trim();
+  if (!s) return 'json';
+  if (/^[\[{]/.test(s)) {
+    try { JSON.parse(s); return 'json'; } catch (_) { /* 继续猜 */ }
+  }
+  if (/^<\?xml|^<[a-zA-Z]/.test(s)) return 'html';
+  return 'text';
+}
+
+function convertPostmanItem(item, folderId, inheritedAuth, out) {
+  const req = item.request;
+  const r = emptyRequest({ name: str(item.name) || '未命名接口', folderId: folderId });
+  if (typeof req === 'string') {
+    r.method = 'GET';
+    const split = splitUrl(req);
+    r.url = split.base;
+    r.params = split.params;
+    r.auth = Object.assign(r.auth, postmanAuth(inheritedAuth));
+  } else if (req && typeof req === 'object') {
+    r.method = req.method ? String(req.method).toUpperCase() : 'GET';
+    if (METHODS.indexOf(r.method) < 0) r.method = 'GET';
+    const text = postmanUrlText(req.url);
+    const split = splitUrl(text);
+    r.url = split.base;
+    r.params = split.params;
+    if (req.url && typeof req.url === 'object' && Array.isArray(req.url.query) && req.url.query.length) {
+      // Postman 的 query 数组是权威来源（含 disabled 标记）
+      r.params = req.url.query.filter((q) => q && typeof q === 'object').map((q) => ({
+        key: str(q.key), value: str(q.value), enabled: q.disabled !== true
+      }));
+    }
+    r.headers = (Array.isArray(req.header) ? req.header : [])
+      .filter((x) => x && typeof x === 'object' && str(x.key) !== '')
+      .map((x) => ({ key: str(x.key), value: str(x.value), enabled: x.disabled !== true }));
+    r.body = postmanBody(req.body);
+    const auth = postmanAuth(req.auth || inheritedAuth);
+    r.auth = Object.assign(r.auth, auth);
+    const desc = req.description;
+    r.note = typeof desc === 'string' ? desc : (desc && typeof desc === 'object' ? str(desc.content) : '');
+  }
+  out.requests.push(r);
+}
+
+function walkPostmanItem(items, parentId, inheritedAuth, out) {
+  if (!Array.isArray(items)) return;
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    if (Array.isArray(item.item)) {
+      const folder = { id: uid('f'), name: str(item.name) || '未命名分组', parentId: parentId };
+      out.folders.push(folder);
+      walkPostmanItem(item.item, folder.id, item.auth || inheritedAuth, out);
+    } else if (item.request !== undefined) {
+      convertPostmanItem(item, parentId, inheritedAuth, out);
+    }
+  }
+}
+
+function parsePostmanCollection(col) {
+  const out = { name: '导入的集合', description: '', folders: [], requests: [], variables: [] };
+  const root = col.collection && typeof col.collection === 'object' ? col.collection : col;
+  const info = root.info || (col.info) || {};
+  out.name = str(info.name) || str(root.name) || '导入的集合';
+  const desc = info.description !== undefined ? info.description : root.description;
+  out.description = typeof desc === 'string' ? desc : (desc && typeof desc === 'object' ? str(desc.content) : '');
+  walkPostmanItem(root.item || root.requests || [], null, root.auth, out);
+  const vars = Array.isArray(root.variable) ? root.variable : (Array.isArray(root.variables) ? root.variables : []);
+  for (const v of vars) {
+    if (!v || typeof v !== 'object') continue;
+    out.variables.push({ key: str(v.key !== undefined ? v.key : v.id), value: str(v.value), enabled: v.disabled !== true });
+  }
+  return out;
+}
+
+function parsePostmanV1(col) {
+  const out = { name: str(col.name) || '导入的集合', description: str(col.description), folders: [], requests: [], variables: [] };
+  const folderMap = new Map();
+  const folders = Array.isArray(col.folders) ? col.folders : [];
+  for (const f of folders) {
+    const folder = { id: uid('f'), name: str(f.name || f.id) || '未命名分组', parentId: null };
+    folderMap.set(str(f.id || f.name), folder.id);
+    out.folders.push(folder);
+  }
+  const reqs = Array.isArray(col.requests) ? col.requests : [];
+  for (const q of reqs) {
+    if (!q || typeof q !== 'object') continue;
+    const r = emptyRequest({ name: str(q.name) || '未命名接口', folderId: folderMap.get(str(q.folder)) || null });
+    r.method = METHODS.indexOf(String(q.method || 'GET').toUpperCase()) >= 0 ? String(q.method).toUpperCase() : 'GET';
+    const split = splitUrl(postmanUrlText(q.url));
+    r.url = split.base;
+    r.params = split.params;
+    r.headers = (Array.isArray(q.headers) ? q.headers : []).map((x) => ({
+      key: str(x.key), value: str(x.value), enabled: x.enabled !== false
+    }));
+    if (q.dataMode === 'raw' || q.rawModeData) {
+      r.body = { mode: 'raw', raw: str(q.rawModeData), language: guessLanguage(q.rawModeData), form: [] };
+    } else if (q.dataMode === 'urlencoded' && Array.isArray(q.data)) {
+      r.body = { mode: 'urlencoded', raw: '', language: 'json', form: q.data.map((x) => ({ key: str(x.key), value: str(x.value), enabled: x.enabled !== false, type: 'text' })) };
+    }
+    out.requests.push(r);
+  }
+  return out;
+}
+
+/** 是不是 API-HUB 自己的数据文件（认 v1 与 v2） */
+function isHubFile(json) {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return false;
+  return /^api-hub\//.test(str(json.schema));
+}
+
+function detectFormat(json) {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return 'unknown';
+  if (isHubFile(json) || (Array.isArray(json.requests) && Array.isArray(json.folders) && !json.info)) return 'apihub';
+  const schema = json.info && json.info.schema ? String(json.info.schema) : '';
+  if (/collection\/v2/i.test(schema)) return 'postman21';
+  if (json.info && Array.isArray(json.item)) return 'postman21';
+  if (json.collection && Array.isArray(json.collection.item)) return 'postman21';
+  if (Array.isArray(json.item) && (json.info || json.name)) return 'postman21';
+  if (Array.isArray(json.requests) && !json.folders) return 'postman1';
+  if (Array.isArray(json.values)) return 'postman-env';
+  if (json.environment && Array.isArray(json.environment.values)) return 'postman-env';
+  return 'unknown';
+}
+
+/** 导入结果里，哪些分组真的挂着新接口（祖先也算），避免落一堆空壳 */
+function usedFoldersOf(parsed, requests) {
+  const byId = new Map(parsed.folders.map((f) => [f.id, f]));
+  const used = new Set();
+  for (const r of requests) {
+    let cur = r.folderId;
+    let guard = 0;
+    while (cur && !used.has(cur) && guard++ < 64) {
+      used.add(cur);
+      cur = (byId.get(cur) || {}).parentId || null;
+    }
+  }
+  return used;
+}
+
+/** 把一个 Postman 集合整体建成数据文件里的一个集合 */
+function buildCollection(hub, parsed, nameOverride) {
+  const collection = emptyCollection({
+    name: uniqueName(nameOverride || parsed.name || '导入的集合', new Set(hub.collections.map((c) => c.name))),
+    description: parsed.description || '',
+    variables: normalizeKvList(parsed.variables)
+  });
+  hub.collections.push(collection);
+
+  const used = usedFoldersOf(parsed, parsed.requests);
+  const folderIdMap = new Map();
+  for (const f of parsed.folders) {
+    if (!used.has(f.id)) continue;
+    const parentId = f.parentId && folderIdMap.has(f.parentId) ? folderIdMap.get(f.parentId) : null;
+    const id = uid('f');
+    hub.folders.push({ id: id, collectionId: collection.id, name: f.name, parentId: parentId });
+    folderIdMap.set(f.id, id);
+  }
+  for (const r of parsed.requests) {
+    const folderId = r.folderId && folderIdMap.has(r.folderId) ? folderIdMap.get(r.folderId) : null;
+    hub.requests.push(Object.assign({}, r, {
+      id: uid('r'), collectionId: collection.id, folderId: folderId, createdAt: nowIso(), updatedAt: nowIso()
+    }));
+  }
+  return collection;
+}
+
+/**
+ * 把导入结果并进一个已有集合。
+ * 先按「方法 + 地址 + 名字」去重，再按分组名复用已有的分组 —— 重复导入不会长出空壳。
+ * @returns {{added:number, skipped:number}}
+ */
+function mergeIntoCollection(hub, collectionId, parsed) {
+  const fingerprint = new Set(
+    hub.requests.filter((r) => r.collectionId === collectionId).map((r) => r.method + ' ' + r.url + ' ' + r.name)
+  );
+  const fresh = [];
+  let skipped = 0;
+  for (const r of parsed.requests) {
+    const fp = r.method + ' ' + r.url + ' ' + r.name;
+    if (fingerprint.has(fp)) { skipped++; continue; }
+    fingerprint.add(fp);
+    fresh.push(r);
+  }
+
+  const collection = hub.collections.find((c) => c.id === collectionId);
+  if (collection) {
+    for (const v of parsed.variables) {
+      if (!v.key) continue;
+      if (!collection.variables.some((x) => x.key === v.key)) {
+        collection.variables.push({ key: v.key, value: v.value, enabled: v.enabled !== false });
+      }
+    }
+  }
+
+  if (!fresh.length) return { added: 0, skipped: skipped };
+
+  const used = usedFoldersOf(parsed, fresh);
+  const folderIdMap = new Map();
+  for (const f of parsed.folders) {
+    if (!used.has(f.id)) continue;
+    const parentId = f.parentId && folderIdMap.has(f.parentId) ? folderIdMap.get(f.parentId) : null;
+    const hit = hub.folders.find((x) =>
+      x.collectionId === collectionId && x.name === f.name && str(x.parentId) === str(parentId));
+    if (hit) { folderIdMap.set(f.id, hit.id); continue; }
+    const id = uid('f');
+    hub.folders.push({ id: id, collectionId: collectionId, name: f.name, parentId: parentId });
+    folderIdMap.set(f.id, id);
+  }
+
+  let added = 0;
+  for (const r of fresh) {
+    const folderId = r.folderId && folderIdMap.has(r.folderId) ? folderIdMap.get(r.folderId) : null;
+    hub.requests.push(Object.assign({}, r, {
+      id: uid('r'), collectionId: collectionId, folderId: folderId, createdAt: nowIso(), updatedAt: nowIso()
+    }));
+    added++;
+  }
+  return { added: added, skipped: skipped };
+}
+
+/** 把一份 API-HUB JSON（可能是老的、也可能多集合）并进当前数据 */
+function importHubData(hub, source) {
+  const incoming = normalizeHub(source);
+  let added = 0;
+  for (const col of incoming.collections) {
+    const collection = emptyCollection({
+      name: uniqueName(col.name, new Set(hub.collections.map((c) => c.name))),
+      description: col.description,
+      variables: col.variables
+    });
+    hub.collections.push(collection);
+    const srcFolders = incoming.folders.filter((f) => f.collectionId === col.id);
+    const folderIdMap = new Map();
+    let guard = 0;
+    while (folderIdMap.size < srcFolders.length && guard++ < 200) {
+      for (const f of srcFolders) {
+        if (folderIdMap.has(f.id)) continue;
+        const parentId = f.parentId ? (folderIdMap.get(f.parentId) || null) : null;
+        if (f.parentId && !folderIdMap.has(f.parentId)) continue;
+        const id = uid('f');
+        hub.folders.push({ id: id, collectionId: collection.id, name: f.name, parentId: parentId });
+        folderIdMap.set(f.id, id);
+      }
+    }
+    for (const r of incoming.requests.filter((x) => x.collectionId === col.id)) {
+      hub.requests.push(Object.assign({}, r, {
+        id: uid('r'),
+        collectionId: collection.id,
+        folderId: r.folderId ? (folderIdMap.get(r.folderId) || null) : null,
+        createdAt: nowIso(),
+        updatedAt: nowIso()
+      }));
+      added++;
+    }
+  }
+  return { added: added, collections: incoming.collections.length };
+}
+
+function uniqueName(base, taken) {
+  let name = base, i = 2;
+  while (taken.has(name)) name = base + ' ' + i++;
+  return name;
+}
+
+/** 导出为 Postman Collection v2.1；给了 collectionId 就只导那一个集合 */
+function toPostman(hub, collectionId) {
+  const scope = collectionId ? hub.collections.filter((c) => c.id === collectionId) : hub.collections;
+  const scopeIds = new Set(scope.map((c) => c.id));
+  const foldersIn = hub.folders.filter((f) => scopeIds.has(f.collectionId));
+  const requestsIn = hub.requests.filter((r) => scopeIds.has(r.collectionId) && (!r.folderId || foldersIn.some((f) => f.id === r.folderId)));
+  const childrenOf = (pid) => ({
+    folders: foldersIn.filter((f) => str(f.parentId) === str(pid)),
+    requests: requestsIn.filter((r) => str(r.folderId) === str(pid))
+  });
+  const reqItem = (r) => {
+    const header = r.headers.filter((x) => x.key).map((x) => ({ key: x.key, value: x.value, disabled: !x.enabled }));
+    const query = r.params.filter((x) => x.key).map((x) => ({ key: x.key, value: x.value, disabled: !x.enabled }));
+    const url = { raw: r.url + (query.filter((q) => !q.disabled).length
+      ? '?' + query.filter((q) => !q.disabled).map((q) => encodeURIComponent(q.key) + '=' + encodeURIComponent(q.value)).join('&')
+      : ''), query: query };
+    const request = { method: r.method, header: header, url: url };
+    if (r.body.mode === 'raw') {
+      request.body = { mode: 'raw', raw: r.body.raw, options: { raw: { language: r.body.language || 'json' } } };
+    } else if (r.body.mode === 'urlencoded') {
+      request.body = { mode: 'urlencoded', urlencoded: r.body.form.map((x) => ({ key: x.key, value: x.value, disabled: !x.enabled })) };
+    } else if (r.body.mode === 'formdata') {
+      request.body = {
+        mode: 'formdata',
+        formdata: r.body.form.map((x) => ({
+          key: x.key,
+          value: x.type === 'file' ? undefined : x.value,
+          src: x.type === 'file' ? (x.fileName || '') : undefined,
+          type: x.type === 'file' ? 'file' : 'text',
+          disabled: !x.enabled
+        }))
+      };
+    }
+    if (r.auth && r.auth.type === 'bearer') request.auth = { type: 'bearer', bearer: [{ key: 'token', value: r.auth.token, type: 'string' }] };
+    if (r.auth && r.auth.type === 'basic') request.auth = { type: 'basic', basic: [{ key: 'username', value: r.auth.username }, { key: 'password', value: r.auth.password }] };
+    if (r.auth && r.auth.type === 'apikey') request.auth = { type: 'apikey', apikey: [{ key: 'key', value: r.auth.key }, { key: 'value', value: r.auth.value }, { key: 'in', value: r.auth.addTo }] };
+    if (r.note) request.description = r.note;
+    return { name: r.name, request: request };
+  };
+  const build = (pid) => {
+    const kids = childrenOf(pid);
+    const rows = [];
+    for (const f of kids.folders) rows.push({ name: f.name, item: build(f.id) });
+    for (const r of kids.requests) rows.push(reqItem(r));
+    return rows;
+  };
+  const items = [];
+  if (collectionId) {
+    items.push.apply(items, build(null));
+  } else {
+    // 全量导出：每个集合包成一个顶层分组，还是一个合法的 Collection 文件
+    for (const c of scope) {
+      const rows = [];
+      const walk = (pid) => {
+        const kids = { folders: foldersIn.filter((f) => str(f.parentId) === str(pid) && f.collectionId === c.id),
+          requests: requestsIn.filter((r) => str(r.folderId) === str(pid) && r.collectionId === c.id) };
+        const out = [];
+        for (const f of kids.folders) out.push({ name: f.name, item: walk(f.id) });
+        for (const r of kids.requests) out.push(reqItem(r));
+        return out;
+      };
+      rows.push.apply(rows, walk(null));
+      items.push({ name: c.name, item: rows });
+    }
+  }
+  const variables = collectionId
+    ? (scope[0] ? scope[0].variables : [])
+    : hub.variables;
+  return {
+    info: {
+      _postman_id: uid('pm'),
+      name: collectionId && scope[0] ? scope[0].name : (hub.name || 'API-HUB 导出'),
+      schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
+    },
+    item: items,
+    variable: variables.filter((v) => v.key).map((v) => ({ key: v.key, value: v.value, type: 'string' }))
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. 变量与请求组装
+   ═══════════════════════════════════════════════════════════════════ */
+
+function varMap(hub, collectionId) {
+  const map = {};
+  for (const v of hub.variables) if (v.enabled !== false && v.key) map[v.key] = v.value;
+  const collection = hub.collections.find((c) => c.id === collectionId);
+  if (collection) {
+    for (const v of collection.variables || []) {
+      if (v.enabled !== false && v.key) map[v.key] = v.value;
+    }
+  }
+  return map;
+}
+
+function dynamic(name) {
+  if (name === '$timestamp') return String(Math.floor(Date.now() / 1000));
+  if (name === '$isoTimestamp') return nowIso();
+  if (name === '$guid') {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  }
+  if (name === '$randomInt') return String(Math.floor(Math.random() * 1000));
+  return undefined;
+}
+
+/** 替换 {{var}}；返回文本 + 未解析的变量名 */
+function resolveVars(text, vars) {
+  const missing = [];
+  const out = str(text).replace(/\{\{\s*([^{}\s]+)\s*\}\}/g, (whole, name) => {
+    if (Object.prototype.hasOwnProperty.call(vars, name)) return String(vars[name]);
+    const dyn = dynamic(name);
+    if (dyn !== undefined) return dyn;
+    if (missing.indexOf(name) < 0) missing.push(name);
+    return whole;
+  });
+  return { text: out, missing: missing };
+}
+
+function hasHeader(headers, name) {
+  const lower = name.toLowerCase();
+  return Object.keys(headers).some((k) => k.toLowerCase() === lower);
+}
+
+function b64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+const CT_BY_LANG = { json: 'application/json', xml: 'application/xml', html: 'text/html', text: 'text/plain', javascript: 'application/javascript' };
+
+/** 组装最终请求：解析变量 → 拼 URL → 头 → 体 → 认证 */
+function prepare(req, hub) {
+  // 集合变量盖过全局变量
+  const vars = varMap(hub, req.collectionId);
+  const missing = [];
+  const take = (txt) => {
+    const r = resolveVars(txt, vars);
+    for (const m of r.missing) if (missing.indexOf(m) < 0) missing.push(m);
+    return r.text;
+  };
+
+  let base = take(req.url).trim();
+  if (base && !/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(base)) {
+    // 相对地址：补上默认协议，方便只写 host/path
+    if (/^[\w.-]+(:\d+)?(\/|$)/.test(base)) base = 'http://' + base;
+  }
+
+  const pairs = [];
+  for (const p of req.params) {
+    if (!p.key || p.enabled === false) continue;
+    pairs.push([take(p.key), take(p.value)]);
+  }
+
+  const headers = {};
+  for (const hd of req.headers) {
+    if (!hd.key || hd.enabled === false) continue;
+    const name = take(hd.key).trim();
+    if (!name) continue;
+    headers[name] = take(hd.value);
+  }
+
+  // 认证
+  const auth = req.auth || { type: 'none' };
+  if (auth.type === 'bearer' && auth.token) {
+    if (!hasHeader(headers, 'authorization')) headers['Authorization'] = 'Bearer ' + take(auth.token);
+  } else if (auth.type === 'basic') {
+    if (!hasHeader(headers, 'authorization')) {
+      headers['Authorization'] = 'Basic ' + b64(take(auth.username) + ':' + take(auth.password));
+    }
+  } else if (auth.type === 'apikey' && auth.key) {
+    if (auth.addTo === 'query') pairs.push([take(auth.key), take(auth.value)]);
+    else if (!hasHeader(headers, auth.key)) headers[take(auth.key)] = take(auth.value);
+  }
+
+  // 请求体
+  let body = null;
+  let multipart = null;
+  const mode = req.body.mode;
+  if (mode === 'raw' || mode === 'graphql') {
+    body = take(req.body.raw);
+    if (!hasHeader(headers, 'content-type')) {
+      const ct = CT_BY_LANG[req.body.language] || 'text/plain';
+      headers['Content-Type'] = ct;
+    }
+  } else if (mode === 'urlencoded') {
+    body = req.body.form
+      .filter((x) => x.key && x.enabled !== false)
+      .map((x) => encodeURIComponent(take(x.key)) + '=' + encodeURIComponent(take(x.value)))
+      .join('&');
+    if (!hasHeader(headers, 'content-type')) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  } else if (mode === 'formdata') {
+    // 谁发谁拼：本机代理按 parts 拼字节流，浏览器用 FormData
+    const parts = [];
+    for (const row of req.body.form) {
+      if (!row.key || row.enabled === false) continue;
+      if (row.type === 'file') {
+        const file = state.formFiles.get(row.id) || null;
+        parts.push({
+          type: 'file',
+          name: take(row.key),
+          file: file,
+          fileName: file ? file.name : (row.fileName || ''),
+          contentType: (file && file.type) || row.contentType || 'application/octet-stream',
+          missing: !file
+        });
+      } else {
+        parts.push({ type: 'text', name: take(row.key), value: take(row.value) });
+      }
+    }
+    multipart = {
+      boundary: '----ApiHubBoundary' + Math.random().toString(16).slice(2, 12),
+      parts: parts
+    };
+    if (!hasHeader(headers, 'content-type')) {
+      headers['Content-Type'] = 'multipart/form-data; boundary=' + multipart.boundary;
+    }
+  }
+
+  if (body !== null && (req.method === 'GET' || req.method === 'HEAD') && !body) body = null;
+
+  let url = base;
+  if (pairs.length) {
+    const qs = pairs.map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
+    url = (base.indexOf('?') >= 0 ? base + '&' : base + '?') + qs;
+  }
+
+  return {
+    method: req.method,
+    url: url,
+    headers: headers,
+    body: body,
+    multipart: multipart,
+    missing: missing,
+    timeoutMs: (req.timeout > 0 ? req.timeout : DEFAULT_TIMEOUT) * 1000,
+    tlsInsecure: req.tlsInsecure === true
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. 状态
+   ═══════════════════════════════════════════════════════════════════ */
+
+const state = {
+  mode: 'file',            // 'file' | 'host'
+  hostInfo: null,
+  fileHandle: null,        // FileSystemFileHandle
+  dataPath: '',            // host 模式下的绝对路径 / file 模式下的显示名
+  data: emptyHub(),
+  loaded: false,           // 是否绑定过真实存储
+  dirty: false,
+  saving: false,
+  autoSave: true,
+  readOnlyBlock: false,    // 读文件失败后暂停写盘，避免覆盖
+  selectedId: null,
+  tab: 'params',
+  respTab: 'body',
+  respView: 'tree',        // 'tree' | 'raw'
+  query: '',
+  response: null,
+  sending: false,
+  abort: null,
+  openFolders: {},
+  openCollections: {},
+  lastCollectionId: '',
+  theme: 'auto',
+  respFocus: false,
+  formFiles: new Map()     // 表单里选中的文件：rowId -> File（不进 JSON，只活在这次会话里）
+};
+
+function currentRequest() {
+  return state.data.requests.find((r) => r.id === state.selectedId) || null;
+}
+
+function markDirty() {
+  state.data.updatedAt = nowIso();
+  const req = currentRequest();
+  if (req) req.updatedAt = nowIso();
+  if (!state.dirty) {
+    state.dirty = true;
+    paintDirty();
+  }
+  // 改参数 / 认证 / 地址都会影响最终 URL，顺手把那行提示刷新掉
+  if (state.ui && state.ui.paintUrlHint) state.ui.paintUrlHint();
+  if (state.autoSave) scheduleSave();
+}
+
+let saveTimer = 0;
+function scheduleSave() {
+  if (state.saving || state.readOnlyBlock) return;
+  if (!canSave()) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { void saveNow(true); }, 1200);
+}
+
+function canSave() {
+  if (state.mode === 'host') return !!state.dataPath;
+  return !!state.fileHandle;
+}
+
+function paintDirty() {
+  const label = $('#pathLabel');
+  const base = state.dataPath || (state.mode === 'host' ? '（未选择数据文件）' : '未绑定文件');
+  label.textContent = (state.dirty ? '● ' : '') + base;
+  label.dataset.dirty = state.dirty ? '1' : '0';
+  label.title = base + (state.dirty ? '\n有未保存的修改' : '') + '\n点这里换数据文件位置';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   5. 存储
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function hostFetch(path, body, method, signal) {
+  const res = await fetch(HOST_BASE + path, {
+    method: method || 'GET',
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+    cache: 'no-store',
+    credentials: 'same-origin',
+    signal: signal
+  });
+  const text = await res.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch (_) { json = null; }
+  if (!json) throw new Error('接口返回异常（HTTP ' + res.status + '）：' + text.slice(0, 200));
+  if (!json.ok) throw new Error(json.error || '接口失败');
+  return json.data;
+}
+
+async function detectHost() {
+  const qs = new URLSearchParams(location.search);
+  const force = qs.get('mode');
+  if (force === 'file' || force === 'standalone') return null;
+  if (location.protocol === 'file:') return null;
+  if (force === 'host') {
+    try { return await hostFetch('/status'); } catch (_) { return null; }
+  }
+  try {
+    const info = await hostFetch('/status');
+    if (info && info.mode === 'dsh') return info;
+  } catch (_) { /* 普通静态服务器上没有这个接口，走单网页模式 */ }
+  return null;
+}
+
+async function bootHost(info) {
+  state.mode = 'host';
+  state.hostInfo = info;
+  $('#modeTag').textContent = '插件模式 · 本机代理';
+  let saved = '';
+  try { saved = localStorage.getItem(LS_KEY.path) || ''; } catch (_) { /* 忽略 */ }
+  const path = saved || info.dataFile || '';
+  await loadHostPath(path);
+}
+
+/** 只给个目录（或没写 .json）时，自动补成 <目录>/api-hub.json */
+function normalizeDataPath(raw) {
+  let value = String(raw || '').trim().replace(/^"|"$/g, '');
+  if (!value) return '';
+  if (/\.json$/i.test(value)) return value;
+  value = value.replace(/[\\/]+$/, '');
+  if (!value) return '';
+  return value + '\\api-hub.json';
+}
+
+/**
+ * 打开/切换数据文件。
+ * @param {string} path
+ * @param {{ask?: boolean}} [opts] ask=true 时，目标不存在会先问「新建空白 / 把当前数据搬过去」
+ */
+async function loadHostPath(path, opts) {
+  if (!path) { toast('没有可用的数据文件路径', 'bad'); return false; }
+  const ask = opts && opts.ask === true;
+  try {
+    const res = await hostFetch('/open', { path: path }, 'POST');
+
+    // 换了个文件：先把没落盘的改动存回「原文件」，别丢
+    if (state.dirty && state.dataPath && state.dataPath !== res.path && !state.readOnlyBlock) {
+      await saveNow(true);
+    }
+
+    if (!res.exists && ask) {
+      const hasData = state.data.requests.length > 0;
+      const choice = await modal({
+        title: '这个文件还不存在',
+        body: h('div', null,
+          h('p', null, '路径：', h('code', null, res.path)),
+          hasData
+            ? h('p', null, '要把它建成空文件，还是把当前这 ' + state.data.requests.length + ' 个接口一并写过去？')
+            : h('p', null, '可以现在建，之后保存会自动写到这个文件。')),
+        actions: hasData
+          ? [
+            { label: '取消', value: null },
+            { label: '新建空白', value: 'blank' },
+            { label: '把当前数据写过去', primary: true, value: 'move' }
+          ]
+          : [{ label: '取消', value: null }, { label: '好，就放这儿', primary: true, value: 'blank' }]
+      });
+      if (!choice) return false;
+      if (choice === 'move') {
+        state.dataPath = res.path;
+        try { localStorage.setItem(LS_KEY.path, res.path); } catch (_) { /* 忽略 */ }
+        state.loaded = true;
+        state.readOnlyBlock = false;
+        await saveNow(false);
+        paintDirty();
+        renderSidebar();
+        renderEditor();
+        return true;
+      }
+    }
+
+    state.dataPath = res.path;
+    try { localStorage.setItem(LS_KEY.path, res.path); } catch (_) { /* 忽略 */ }
+    pushRecentPath(res.path);
+    if (res.exists && res.data) {
+      state.data = normalizeHub(res.data);
+      state.readOnlyBlock = false;
+      state.loaded = true;
+      state.dirty = false;
+      toast('已加载 ' + shortPath(res.path) + '（' + state.data.collections.length + ' 个集合 / ' +
+        state.data.requests.length + ' 个接口）', 'ok');
+    } else if (res.exists && !res.data) {
+      state.data = emptyHub();
+      state.readOnlyBlock = true;
+      state.loaded = true;
+      state.dirty = false;
+      toast('数据文件不是合法 JSON，已暂停写盘', 'bad');
+    } else {
+      state.data = emptyHub();
+      state.readOnlyBlock = false;
+      state.loaded = true;
+      state.dirty = false;
+      toast('新位置已就绪，下次改动会写进 ' + shortPath(res.path));
+    }
+    restoreSelection();
+    paintDirty();
+    renderSidebar();
+    renderEditor();
+    if (res.exists && !res.data) showCorruptBanner(res.path);
+    return true;
+  } catch (err) {
+    toast('读取失败：' + err.message, 'bad');
+    return false;
+  }
+}
+
+/** 上次看的是哪个接口，回来还看那个 */
+function restoreSelection() {  if (state.selectedId && currentRequest()) return;
+  let saved = '';
+  try { saved = localStorage.getItem(LS_KEY.sel) || ''; } catch (_) { /* 忽略 */ }
+  state.selectedId = saved && state.data.requests.some((r) => r.id === saved) ? saved : null;
+}
+
+function shortPath(p) {
+  if (!p) return '';
+  const parts = String(p).split(/[\\/]/);
+  return parts.length <= 2 ? p : '…/' + parts.slice(-2).join('/');
+}
+
+function showCorruptBanner(path) {
+  if ($('.banner')) return;
+  const banner = h('div', { class: 'banner' },
+    '数据文件解析失败，为免覆盖已暂停自动写盘。',
+    h('span', { class: 'grow' }),
+    h('button', {
+      onclick: () => {
+        state.readOnlyBlock = false;
+        markDirty();
+        void saveNow(false);
+        banner.remove();
+      }
+    }, '仍然覆盖写入'),
+    h('button', { onclick: () => banner.remove() }, '忽略')
+  );
+  const app = $('.app');
+  const main = $('.main');
+  if (app && main) app.insertBefore(banner, main);
+}
+
+async function saveNow(silent) {
+  if (state.readOnlyBlock) { if (!silent) toast('已暂停写盘，请先处理解析失败的提示', 'bad'); return; }
+  if (state.saving) return;
+  state.saving = true;
+  try {
+    const payload = JSON.parse(JSON.stringify(state.data));
+    if (state.mode === 'host') {
+      if (!state.dataPath) {
+        const path = await askDataPath(state.hostInfo ? state.hostInfo.dataFile : '');
+        if (!path) return;
+        state.dataPath = path;
+      }
+      const res = await hostFetch('/save', { path: state.dataPath, data: payload }, 'POST');
+      state.dataPath = res.path;
+      try { localStorage.setItem(LS_KEY.path, res.path); } catch (_) { /* 忽略 */ }
+      state.dirty = false;
+      paintDirty();
+      if (!silent) toast('已保存到 ' + shortPath(res.path), 'ok');
+      return;
+    }
+    // 浏览器文件模式
+    const json = JSON.stringify(payload, null, 2);
+    if (!state.fileHandle) {
+      const got = await askSaveHandle(json);
+      if (!got) return;
+      state.dirty = false;
+      paintDirty();
+      return;
+    }
+    const writable = await state.fileHandle.createWritable();
+    await writable.write(json);
+    await writable.close();
+    state.dirty = false;
+    paintDirty();
+    if (!silent) toast('已保存', 'ok');
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    toast('保存失败：' + (err && err.message ? err.message : err), 'bad');
+  } finally {
+    state.saving = false;
+  }
+}
+
+async function askSaveHandle(json) {
+  if (!window.showSaveFilePicker) {
+    downloadText((state.data.name || 'api-hub') + '.json', json);
+    toast('当前浏览器不支持直接写文件，已改为下载', 'bad');
+    return false;
+  }
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: (state.data.name || 'api-hub') + '.json',
+      types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+    });
+    const writable = await handle.createWritable();
+    await writable.write(json);
+    await writable.close();
+    state.fileHandle = handle;
+    state.dataPath = handle.name;
+    state.loaded = true;
+    paintDirty();
+    toast('已保存到 ' + handle.name, 'ok');
+    return true;
+  } catch (err) {
+    if (err && err.name === 'AbortError') return false;
+    // 退回下载
+    downloadText((state.data.name || 'api-hub') + '.json', json);
+    toast('写文件失败，已改为下载：' + (err && err.message ? err.message : err), 'bad');
+    return false;
+  }
+}
+
+async function openLocalFile() {
+  if (window.showOpenFilePicker) {
+    let handle;
+    try {
+      const picked = await window.showOpenFilePicker({
+        multiple: false,
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      handle = picked[0];
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      return openViaInput();
+    }
+    const file = await handle.getFile();
+    const text = await file.text();
+    adoptFile(handle, file.name, text);
+    return;
+  }
+  openViaInput();
+}
+
+function openViaInput() {
+  const input = $('#fileInput');
+  input.value = '';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const text = await file.text();
+    adoptFile(null, file.name, text);
+  };
+  input.click();
+}
+
+/**
+ * 打开一个本地 JSON：
+ *   · API-HUB 数据文件（v1/v2）→ 整个接管
+ *   · Postman 集合 / 环境变量 → 并进当前数据（不破坏已有内容）
+ */
+async function adoptFile(handle, name, text) {
+  let json;
+  try { json = JSON.parse(text); }
+  catch (err) {
+    toast('JSON 解析失败：' + err.message, 'bad');
+    return false;
+  }
+
+  if (isHubFile(json)) {
+    state.data = normalizeHub(json);
+    state.dataPath = name;
+    state.loaded = true;
+    state.dirty = false;
+    state.readOnlyBlock = false;
+    restoreSelection();
+    state.fileHandle = handle || null;
+    if (!handle) state.dirty = true;
+    paintDirty();
+    renderSidebar();
+    renderEditor();
+    toast('已打开 ' + name + '（' + state.data.collections.length + ' 个集合 / ' +
+      state.data.requests.length + ' 个接口）', 'ok');
+    return true;
+  }
+
+  // 不是数据文件：当成导入
+  const kind = detectFormat(json);
+  if (kind === 'unknown') {
+    toast('认不出这个 JSON：既不是 API-HUB 数据文件，也不是 Postman 集合', 'bad');
+    return false;
+  }
+  const before = state.data.requests.length;
+  await doImport(json);
+  state.loaded = true;
+  if (!handle) {
+    // 拖进来/选进来的导入内容还没有落盘位置
+    state.dirty = true;
+    paintDirty();
+  }
+  const added = state.data.requests.length - before;
+  if (!added && kind !== 'postman-env') {
+    toast('「' + name + '」里没有新接口', undefined);
+  } else if (state.mode === 'file' && !state.fileHandle) {
+    toast('导入内容还没落盘，点「保存」选个位置', undefined);
+  }
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   6. 发送请求
+   ═══════════════════════════════════════════════════════════════════ */
+
+function corsHint(err) {
+  const msg = (err && err.message) || String(err);
+  if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+    return '网络不可达，或被浏览器的跨域（CORS）策略拦下了。\n'
+      + '· 单网页模式：浏览器直连，目标服务必须允许跨域；可用 --disable-web-security 启动 Chrome。\n'
+      + '· 想彻底绕开跨域：装成 DeepSeek Harness 的 API-HUB 插件，由本机代理发送。\n'
+      + '· 也确认一下地址、端口、协议（http/https）是否写对。';
+  }
+  return msg;
+}
+
+/** 浏览器这一侧用 FormData 拼，文件由浏览器自己读 —— 不要手动设 Content-Type */
+function buildFormData(prep) {
+  const fd = new FormData();
+  const skipped = [];
+  for (const part of prep.multipart.parts) {
+    if (part.type === 'file') {
+      if (part.file) fd.append(part.name, part.file, part.fileName || part.file.name);
+      else skipped.push(part.name);
+    } else {
+      fd.append(part.name, part.value);
+    }
+  }
+  return { fd, skipped };
+}
+
+async function sendStandalone(prep, signal) {
+  const init = {
+    method: prep.method,
+    headers: Object.assign({}, prep.headers),
+    signal: signal,
+    mode: 'cors',
+    credentials: 'omit',
+    redirect: 'follow',
+    cache: 'no-store'
+  };
+  if (prep.multipart && prep.method !== 'GET' && prep.method !== 'HEAD') {
+    const built = buildFormData(prep);
+    init.body = built.fd;
+    // 浏览器要自己加 boundary，手动设的 multipart Content-Type 会把它带歪
+    for (const key of Object.keys(init.headers)) {
+      if (key.toLowerCase() === 'content-type') delete init.headers[key];
+    }
+    prep.skippedFiles = built.skipped;
+  } else if (prep.body !== null && prep.method !== 'GET' && prep.method !== 'HEAD') {
+    init.body = prep.body;
+  }
+  const startedAt = performance.now();
+  let res;
+  try {
+    res = await fetch(prep.url, init);
+  } catch (err) {
+    if (err && (err.name === 'AbortError')) throw err;
+    const e = new Error(corsHint(err));
+    e.timeMs = Math.round(performance.now() - startedAt);
+    throw e;
+  }
+  const raw = await res.text();
+  const timeMs = Math.round(performance.now() - startedAt);
+  const headers = [];
+  res.headers.forEach((v, k) => headers.push([k, v]));
+  return {
+    status: res.status,
+    statusText: res.statusText,
+    headers: headers,
+    body: raw,
+    timeMs: timeMs,
+    size: new Blob([raw]).size,
+    via: '浏览器直连',
+    type: res.type,
+    url: res.url || prep.url
+  };
+}
+
+/** 文件要过 JSON 这一关，只能 base64；单文件上限放在 40MB，够日常传图传包 */
+const MAX_UPLOAD_BYTES = 40 * 1024 * 1024;
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('读取文件失败'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendHost(prep, signal) {
+  let multipart = null;
+  if (prep.multipart) {
+    const parts = [];
+    for (const part of prep.multipart.parts) {
+      if (part.type === 'file') {
+        if (!part.file) continue;
+        if (part.file.size > MAX_UPLOAD_BYTES) {
+          throw new Error('文件太大：' + part.fileName + '（上限 40MB）');
+        }
+        parts.push({
+          type: 'file',
+          name: part.name,
+          fileName: part.fileName,
+          contentType: part.contentType,
+          base64: await fileToBase64(part.file)
+        });
+      } else {
+        parts.push({ type: 'text', name: part.name, value: part.value });
+      }
+    }
+    multipart = { boundary: prep.multipart.boundary, parts: parts };
+  }
+  const data = await hostFetch('/send', {
+    method: prep.method,
+    url: prep.url,
+    headers: prep.headers,
+    body: prep.body,
+    multipart: multipart,
+    timeoutMs: prep.timeoutMs,
+    tlsInsecure: prep.tlsInsecure
+  }, 'POST', signal);
+  return Object.assign({}, data, { via: '本机代理' });
+}
+
+async function doSend() {
+  const req = currentRequest();
+  if (!req) return;
+  if (state.sending) return;
+  if (!str(req.url).trim()) { toast('先填一个地址', 'bad'); return; }
+  const prep = prepare(req, state.data);
+  if (prep.missing.length) {
+    toast('有变量没有取值：' + prep.missing.join('、'), 'bad');
+  }
+  if (prep.multipart) {
+    const noFile = prep.multipart.parts.filter((p) => p.type === 'file' && p.missing && !p.fileName);
+    if (noFile.length) {
+      toast('有 ' + noFile.length + ' 个文件字段还没选文件', 'bad');
+    }
+  }
+  state.sending = true;
+  state.response = null;
+  state.respTab = 'body';
+  if (!canHaveBody(req.method) && req.body.mode !== 'none') {
+    toast(req.method + ' 请求不会带请求体 —— 只改请求体里的值不会生效，要改上面的查询参数', 'bad');
+  }
+  if (state.ui && state.ui.paintSend) state.ui.paintSend();
+  renderResponse();
+  const t0 = performance.now();
+  const controller = new AbortController();
+  state.abort = controller;
+  try {
+    const result = state.mode === 'host'
+      ? await sendHost(prep, controller.signal)
+      : await sendStandalone(prep, controller.signal);
+    result.at = nowIso();
+    result.requestUrl = prep.url;
+    state.response = result;
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      state.response = { aborted: true, timeMs: Math.round(performance.now() - t0), requestUrl: prep.url };
+    } else {
+      state.response = { error: (err && err.message) || String(err), timeMs: err.timeMs || Math.round(performance.now() - t0), requestUrl: prep.url };
+    }
+  } finally {
+    state.sending = false;
+    state.abort = null;
+    if (state.ui && state.ui.paintSend) state.ui.paintSend();
+    renderResponse();
+  }
+}
+
+function cancelSend() {
+  if (state.abort) state.abort.abort();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   7. 渲染 · 侧栏
+   ═══════════════════════════════════════════════════════════════════ */
+
+function folderCounts() {
+  const counts = new Map();
+  for (const r of state.data.requests) {
+    if (!r.folderId) continue;
+    counts.set(r.folderId, (counts.get(r.folderId) || 0) + 1);
+  }
+  return counts;
+}
+
+function collectionCounts() {
+  const counts = new Map();
+  for (const r of state.data.requests) {
+    counts.set(r.collectionId, (counts.get(r.collectionId) || 0) + 1);
+  }
+  return counts;
+}
+
+/** 当前操作落在哪个集合：选中的接口 → 上次点的 → 第一个 */
+function currentCollectionId() {
+  const req = currentRequest();
+  if (req && req.collectionId) return req.collectionId;
+  if (state.lastCollectionId && state.data.collections.some((c) => c.id === state.lastCollectionId)) {
+    return state.lastCollectionId;
+  }
+  return state.data.collections[0] ? state.data.collections[0].id : '';
+}
+
+function collectionName(id) {
+  const c = state.data.collections.find((x) => x.id === id);
+  return c ? c.name : '';
+}
+
+function folderName(id) {
+  const f = state.data.folders.find((x) => x.id === id);
+  return f ? f.name : '';
+}
+
+function renderSidebar() {
+  const list = $('#list');
+  // 整棵树重画会把滚动位置带丢，记一下再还回去
+  const keepScroll = list.scrollTop;
+  clear(list);
+  const q = state.query.trim();
+
+  if (!state.data.collections.length) {
+    list.appendChild(emptyState());
+    updateCount();
+    list.scrollTop = keepScroll;
+    return;
+  }
+
+  // 搜索：拍平成一张表，旁边标出它属于哪个集合
+  if (q) {
+    const matching = visibleRequests();
+    if (!matching.length) {
+      list.appendChild(h('div', { class: 'empty' }, '没有匹配的接口'));
+    } else {
+      for (const r of matching) list.appendChild(requestRow(r, 0, collectionName(r.collectionId)));
+    }
+    updateCount(matching.length);
+    list.scrollTop = keepScroll;
+    return;
+  }
+
+  const fCounts = folderCounts();
+  const cCounts = collectionCounts();
+  const byParent = new Map();
+  for (const f of state.data.folders) {
+    const key = str(f.parentId);
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key).push(f);
+  }
+
+  const walk = (collectionId, parentId, depth) => {
+    const kids = (byParent.get(str(parentId)) || []).filter((f) => f.collectionId === collectionId);
+    for (const f of kids) {
+      const open = state.openFolders[f.id] !== false;
+      const folderRow = h('div', {
+        class: 'folder',
+        'data-open': open ? '1' : '0',
+        style: { paddingLeft: (6 + depth * 12) + 'px' },
+        title: '拖动接口到这里＝放进这个分组',
+        onclick: () => {
+          state.openFolders[f.id] = !open;
+          persistOpenFolders();
+          renderSidebar();
+        }
+      },
+        h('span', { class: 'caret' }, '▼'),
+        h('span', { class: 'fname', text: f.name }),
+        h('span', { class: 'fcount' }, fCounts.get(f.id) || ''),
+        h('span', { class: 'facts' },
+          h('button', { class: 'fact', title: '重命名分组', onclick: (e) => { e.stopPropagation(); void renameFolder(f); } }, '✎'),
+          h('button', { class: 'fact del', title: '删除分组', onclick: (e) => { e.stopPropagation(); void removeFolder(f); } }, '✕')
+        )
+      );
+      bindFolderDrop(folderRow, f);
+      list.appendChild(folderRow);
+      if (open) walk(collectionId, f.id, depth + 1);
+    }
+    for (const r of state.data.requests) {
+      if (r.collectionId === collectionId && str(r.folderId) === str(parentId)) {
+        list.appendChild(requestRow(r, depth));
+      }
+    }
+  };
+
+  for (const c of state.data.collections) {
+    const open = state.openCollections[c.id] !== false;
+    const count = cCounts.get(c.id) || 0;
+    const row = h('div', {
+      class: 'collection',
+      'data-open': open ? '1' : '0',
+      draggable: 'true',
+      title: (c.description || c.name) + '\n拖动可以调整集合顺序',
+      onclick: () => {
+        state.openCollections[c.id] = !open;
+        state.lastCollectionId = c.id;
+        persistOpenFolders();
+        renderSidebar();
+      }
+    },
+      h('span', { class: 'caret' }, '▼'),
+      h('span', { class: 'cname', text: c.name }),
+      h('span', { class: 'ccount' }, count || ''),
+      h('span', { class: 'facts' },
+        h('button', { class: 'fact', title: '在这个集合里新建接口', onclick: (e) => { e.stopPropagation(); addRequest(null, c.id); } }, '＋'),
+        h('button', { class: 'fact', title: '新建分组', onclick: (e) => { e.stopPropagation(); void addFolder(c.id); } }, '▤'),
+        h('button', { class: 'fact', title: '编辑集合', onclick: (e) => { e.stopPropagation(); void renameCollection(c); } }, '✎'),
+        h('button', { class: 'fact del', title: '删除集合（连同里面的接口）', onclick: (e) => { e.stopPropagation(); void removeCollection(c); } }, '✕')
+      )
+    );
+    bindCollectionDrag(row, c);
+    list.appendChild(row);
+    if (open) walk(c.id, null, 1);
+  }
+  updateCount();
+  list.scrollTop = keepScroll;
+}
+
+/* ── 拖动：集合排序 / 接口排序与搬家 ── */
+
+/** 正在拖的东西：{ type: 'collection' | 'request', id } */
+let dragState = null;
+
+function isDragging(type) {
+  return dragState !== null && dragState.type === type;
+}
+
+function clearDropHints() {
+  for (const el of document.querySelectorAll('.drop-before, .drop-after, .drop-into')) {
+    el.classList.remove('drop-before', 'drop-after', 'drop-into');
+  }
+}
+
+function reorderCollection(fromId, toId, place) {
+  const list = state.data.collections;
+  const from = list.findIndex((c) => c.id === fromId);
+  if (from < 0 || !toId) return;
+  const toTarget = list.findIndex((c) => c.id === toId);
+  if (toTarget < 0) return;
+  if (from === toTarget && place) return;
+  const moved = list.splice(from, 1)[0];
+  let to = list.findIndex((c) => c.id === toId);
+  if (to < 0) to = list.length;
+  if (place === 'after') to += 1;
+  list.splice(to, 0, moved);
+  markDirty();
+  renderSidebar();
+}
+
+/**
+ * 把接口挪到新位置：before/after 跟着目标接口，into 放到目标末尾。
+ * 目标在别的集合/分组里时，会连 collectionId / folderId 一起改过去（等于搬家）。
+ */
+function moveRequestTo(dragId, target, place) {
+  const list = state.data.requests;
+  const from = list.findIndex((r) => r.id === dragId);
+  if (from < 0) return;
+  if (target.id && target.id === dragId) return;
+  const moved = list[from];
+  const oldCid = moved.collectionId;
+  const oldFid = moved.folderId;
+  list.splice(from, 1);
+  moved.collectionId = target.collectionId;
+  moved.folderId = target.folderId;
+  if (place === 'into') {
+    list.push(moved);
+  } else {
+    let at = list.findIndex((r) => r.id === target.id);
+    if (at < 0) at = list.length;
+    if (place === 'after') at += 1;
+    list.splice(at, 0, moved);
+  }
+  // 目标那边可能收起来了，挪过去要能看见
+  state.openCollections[moved.collectionId] = true;
+  if (moved.folderId) state.openFolders[moved.folderId] = true;
+  persistOpenFolders();
+  markDirty();
+  renderSidebar();
+  const row = document.querySelector('#list .req[data-id="' + moved.id + '"]');
+  if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+  // 换了集合/分组就说一声，免得以为只是挪了个位置
+  if (moved.collectionId !== oldCid || str(moved.folderId) !== str(oldFid)) {
+    const where = folderName(moved.folderId);
+    toast('「' + moved.name + '」已移到 ' + collectionName(moved.collectionId) + (where ? ' / ' + where : ''));
+  }
+}
+
+/** 通用的「拖到这里」高亮：返回指针落在上半还是下半 */
+function dropPlace(row, e) {
+  const box = row.getBoundingClientRect();
+  return (e.clientY - box.top) > box.height / 2 ? 'after' : 'before';
+}
+
+function bindCollectionDrag(row, c) {
+  row.addEventListener('dragstart', (e) => {
+    // 从右侧小按钮上按下时不要开始拖
+    if (e.target && e.target.closest && e.target.closest('.facts')) {
+      e.preventDefault();
+      return;
+    }
+    dragState = { type: 'collection', id: c.id };
+    row.classList.add('dragging');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', c.name); } catch (_) { /* 忽略 */ }
+    }
+  });
+
+  row.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    clearDropHints();
+    dragState = null;
+  });
+
+  row.addEventListener('dragover', (e) => {
+    if (!dragState) return;
+    if (isDragging('collection') && dragState.id === c.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    clearDropHints();
+    if (isDragging('collection')) {
+      row.classList.add(dropPlace(row, e) === 'after' ? 'drop-after' : 'drop-before');
+    } else {
+      row.classList.add('drop-into');
+    }
+  });
+
+  row.addEventListener('dragleave', () => {
+    row.classList.remove('drop-before', 'drop-after', 'drop-into');
+  });
+
+  row.addEventListener('drop', (e) => {
+    if (!dragState) return;
+    if (isDragging('collection') && dragState.id === c.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const state0 = dragState;
+    dragState = null;
+    clearDropHints();
+    if (state0.type === 'collection') {
+      reorderCollection(state0.id, c.id, dropPlace(row, e));
+    } else {
+      // 接口拖到集合头 = 放进这个集合的根目录（末尾）
+      moveRequestTo(state0.id, { id: null, collectionId: c.id, folderId: null }, 'into');
+    }
+  });
+}
+
+/** 分组行：接受接口拖入（放到这个分组末尾） */
+function bindFolderDrop(row, f) {
+  row.addEventListener('dragover', (e) => {
+    if (!isDragging('request')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    clearDropHints();
+    row.classList.add('drop-into');
+  });
+  row.addEventListener('dragleave', () => row.classList.remove('drop-into'));
+  row.addEventListener('drop', (e) => {
+    if (!isDragging('request')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = dragState.id;
+    dragState = null;
+    clearDropHints();
+    moveRequestTo(id, { id: null, collectionId: f.collectionId, folderId: f.id }, 'into');
+  });
+}
+
+/** 接口行：拖动排序 / 拖到别的集合或分组 */
+function bindRequestDrag(row, r) {
+  row.draggable = true;
+  row.addEventListener('dragstart', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.facts')) {
+      e.preventDefault();
+      return;
+    }
+    dragState = { type: 'request', id: r.id };
+    row.classList.add('dragging');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', r.name); } catch (_) { /* 忽略 */ }
+    }
+  });
+
+  row.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    clearDropHints();
+    dragState = null;
+  });
+
+  row.addEventListener('dragover', (e) => {
+    if (!isDragging('request') || dragState.id === r.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    clearDropHints();
+    row.classList.add(dropPlace(row, e) === 'after' ? 'drop-after' : 'drop-before');
+  });
+
+  row.addEventListener('dragleave', () => {
+    row.classList.remove('drop-before', 'drop-after');
+  });
+
+  row.addEventListener('drop', (e) => {
+    if (!isDragging('request') || dragState.id === r.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = dragState.id;
+    dragState = null;
+    clearDropHints();
+    moveRequestTo(id, { id: r.id, collectionId: r.collectionId, folderId: r.folderId }, dropPlace(row, e));
+  });
+}
+
+function requestRow(r, depth, extra) {
+  const row = h('button', {
+    class: 'req',
+    'data-id': r.id,
+    'data-on': state.selectedId === r.id ? '1' : '0',
+    style: { paddingLeft: (6 + depth * 12) + 'px' },
+    title: (r.url || '(未填地址)') + '\n' + r.name + '\n（可拖动排序，或拖到别的集合/分组）',
+    onclick: () => selectRequest(r.id)
+  },
+    h('span', { class: 'method', 'data-m': r.method }, r.method),
+    h('span', { class: 'rname', text: r.name }),
+    extra ? h('span', { class: 'rtag', text: extra }) : null,
+    h('span', { class: 'facts' },
+      h('button', { class: 'fact', title: '重命名', onclick: (e) => { e.stopPropagation(); void renameRequest(r); } }, '✎'),
+      h('button', { class: 'fact', title: '复制一份', onclick: (e) => { e.stopPropagation(); duplicateRequest(r); } }, '⧉'),
+      h('button', { class: 'fact del', title: '删除', onclick: (e) => { e.stopPropagation(); void removeRequest(r); } }, '✕')
+    )
+  );
+  bindRequestDrag(row, r);
+  return row;
+}
+
+/** 只改高亮，不重画列表 —— 免得点一下列表就跳回顶部 */
+function paintSelection() {
+  for (const row of document.querySelectorAll('#list .req')) {
+    row.dataset.on = row.dataset.id === state.selectedId ? '1' : '0';
+  }
+}
+
+function emptyState() {
+  const host = state.mode === 'host';
+  return h('div', { class: 'empty' },
+    h('b', null, host ? '数据文件是空的' : '还没有打开数据文件'),
+    host
+      ? '导入 Postman 集合，或者新建一个接口。改动会自动写回 JSON 文件。'
+      : h('span', null, '打开一个 JSON 存下来，或者直接导入 Postman 集合。'),
+    h('div', { class: 'btns' },
+      h('button', { class: 'btn primary', onclick: () => void importDialog() }, '导入 Postman Collection'),
+      h('button', { class: 'btn', onclick: () => addRequest() }, '＋ 新建接口'),
+      host
+        ? h('button', {
+          class: 'btn',
+          onclick: () => void askDataPath(state.hostInfo ? state.hostInfo.dataFile : '')
+        }, '换个数据文件位置')
+        : h('button', { class: 'btn', onclick: () => void openLocalFile() }, '打开 JSON 文件')
+    ),
+    h('div', { style: 'margin-top:6px' }, '也可以把 .json 文件拖进窗口（可多选）')
+  );
+}
+
+function updateCount(filtered) {
+  const n = state.data.requests.length;
+  const c = state.data.collections.length;
+  $('#countLabel').textContent = filtered === undefined
+    ? c + ' 个集合 · ' + n + ' 个接口'
+    : '命中 ' + filtered + ' / ' + n;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   8. 渲染 · 编辑区
+   ═══════════════════════════════════════════════════════════════════ */
+
+function selectRequest(id) {
+  if (state.selectedId !== id) state.response = null;
+  state.selectedId = id;
+  const req = state.data.requests.find((r) => r.id === id);
+  if (req) state.lastCollectionId = req.collectionId;
+  state.tab = state.tab || 'params';
+  try { localStorage.setItem(LS_KEY.sel, id || ''); } catch (_) { /* 忽略 */ }
+  paintSelection();
+  renderEditor();
+}
+
+function renderEditor() {
+  const pane = $('#pane');
+  clear(pane);
+  const req = currentRequest();
+  if (!req) {
+    pane.appendChild(h('div', { class: 'paneEmpty' },
+      h('div', { class: 'big' }, '⌁'),
+      h('div', null, '选一个接口，或者新建一个'),
+      h('div', null, h('kbd', null, 'Ctrl'), ' + ', h('kbd', null, 'N'), ' 快速新建')
+    ));
+    return;
+  }
+
+  /* ── 请求头区域 ── */
+  const nameInput = h('input', {
+    class: 'nameInput',
+    value: req.name,
+    placeholder: '接口名字（方便以后找）',
+    oninput: (e) => {
+      req.name = e.target.value;
+      markDirty();
+      updateCount();
+    },
+    onchange: () => renderSidebar()
+  });
+
+  const methodSel = h('select', {
+    class: 'methodSel',
+    'data-m': req.method,
+    onchange: (e) => {
+      req.method = e.target.value;
+      methodSel.dataset.m = req.method;
+      markDirty();
+      renderSidebar();
+    }
+  }, METHODS.map((m) => h('option', { value: m, selected: req.method === m }, m)));
+
+  const urlInput = h('input', {
+    class: 'urlInput',
+    value: req.url,
+    placeholder: '接口地址，支持 {{变量}}，例如 {{baseUrl}}/api/user',
+    spellcheck: 'false',
+    oninput: (e) => {
+      req.url = e.target.value;
+      markDirty();
+      paintUrlHint();
+    },
+    onchange: () => {
+      // 地址里带的 query 搬进参数表；没带就保留手填的参数，不覆盖
+      const split = splitUrl(req.url);
+      if (split.params.length) req.params = split.params;
+      if (split.base !== req.url) {
+        req.url = split.base;
+        urlInput.value = req.url;
+      }
+      markDirty();
+      renderTabBody();
+      paintUrlHint();
+      renderSidebar();
+    },
+    onkeydown: (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void doSend(); }
+  });
+
+  const sendBtn = h('button', {
+    class: 'sendBtn',
+    title: '发送（Ctrl+Enter）'
+  });
+  sendBtn.addEventListener('click', () => (state.sending ? cancelSend() : void doSend()));
+  function paintSend() {
+    clear(sendBtn);
+    if (state.sending) {
+      sendBtn.appendChild(h('span', { class: 'spin' }));
+      sendBtn.appendChild(document.createTextNode('取消'));
+    } else {
+      sendBtn.appendChild(document.createTextNode('发送'));
+    }
+  }
+  paintSend();
+
+  const urlHint = h('div', { class: 'urlHint' });
+  function paintUrlHint() {
+    clear(urlHint);
+    const r = currentRequest();
+    if (!r) return;
+    urlHint.style.display = '';
+    const prep = prepare(r, state.data);
+    if (prep.missing.length) {
+      urlHint.appendChild(h('span', null, '未解析变量：'));
+      urlHint.appendChild(h('b', null, prep.missing.join('、')));
+      return;
+    }
+    if (!prep.url) { urlHint.appendChild(h('span', { class: 'ok' }, '填上地址就能发')); return; }
+    const dup = duplicateBodyKeys(r);
+    // 地址框里已经能看全、也没有别的话要说时，这行就别占地方了
+    if (prep.url === str(r.url).trim() && !dup.length) {
+      urlHint.style.display = 'none';
+      return;
+    }
+    urlHint.appendChild(h('span', {
+      class: 'ok',
+      text: prep.url,
+      title: '这是实际会发出的完整地址，点一下复制',
+      onclick: async () => {
+        const ok = await copyText(prep.url);
+        toast(ok ? '已复制完整地址' : '复制失败', ok ? 'ok' : 'bad');
+      }
+    }));
+    if (dup.length) {
+      urlHint.appendChild(h('span', { class: 'warnText' },
+        '　·　请求体里也有 ' + dup.join('、') + (canHaveBody(r.method) ? '（两处都在发）' : '（' + r.method + ' 不发请求体，只有查询参数生效）')));
+    }
+  }
+
+  const head = h('div', { class: 'reqHead' },
+    h('div', { class: 'row1' }, nameInput),
+    h('div', { class: 'urlRow' }, methodSel, urlInput, sendBtn),
+    urlHint
+  );
+
+  /* ── 标签页 ── */
+  const TABS = [
+    { key: 'params', label: '参数', count: () => req.params.filter((p) => p.key).length },
+    { key: 'headers', label: '请求头', count: () => req.headers.filter((p) => p.key).length },
+    {
+      key: 'body',
+      label: '请求体',
+      dot: () => req.body.mode !== 'none' && canHaveBody(req.method),
+      warn: () => req.body.mode !== 'none' && !canHaveBody(req.method)
+    },
+    { key: 'auth', label: '认证', dot: () => req.auth.type !== 'none' },
+    { key: 'note', label: '备注', dot: () => !!req.note }
+  ];
+  const tabsBar = h('div', { class: 'tabs' }, TABS.map((t) => h('button', {
+    class: 'tab',
+    'data-on': state.tab === t.key ? '1' : '0',
+    onclick: () => { state.tab = t.key; renderEditor(); }
+  },
+    t.label,
+    t.count ? h('span', { class: 'cnt', text: t.count() ? String(t.count()) : '' }) : null,
+    t.dot && t.dot() ? h('span', { class: 'dot' }) : null,
+    t.warn && t.warn() ? h('span', { class: 'dot warn', title: '这个请求不会发送请求体' }) : null
+  )));
+
+  const tabBody = h('div', { class: 'tabBody', id: 'tabBody' });
+
+  function renderTabBody() {
+    clear(tabBody);
+    if (state.tab === 'params') tabBody.appendChild(paramsPanel(req, renderTabBody));
+    else if (state.tab === 'headers') tabBody.appendChild(headersPanel(req, renderTabBody));
+    else if (state.tab === 'body') tabBody.appendChild(bodyPanel(req, renderTabBody));
+    else if (state.tab === 'auth') tabBody.appendChild(authPanel(req, renderTabBody));
+    else tabBody.appendChild(notePanel(req));
+  }
+  renderTabBody();
+
+  /* ── 响应区 ── */
+  const resp = h('div', { class: 'resp' });
+
+  pane.appendChild(head);
+  pane.appendChild(tabsBar);
+  pane.appendChild(tabBody);
+  pane.appendChild(resp);
+
+  state.ui = { resp: resp, sendBtn: sendBtn, paintSend: paintSend, paintUrlHint: paintUrlHint, renderTabBody: renderTabBody, tabsBar: tabsBar };
+  paintUrlHint();
+  renderResponse();
+}
+
+/* ── 参数表 ── */
+function paramsPanel(req, refresh) {
+  const wrap = h('div');
+  wrap.appendChild(h('div', { class: 'kvHead' },
+    h('span', null, '查询参数（拼在 URL 后面）'),
+    h('span', { style: 'margin-left:auto' }, '勾选 = 参与请求')));
+  const box = h('div');
+  kvEditor(box, req.params, refresh, 'key', 'value');
+  wrap.appendChild(box);
+  return wrap;
+}
+
+function headersPanel(req, refresh) {
+  const wrap = h('div');
+  wrap.appendChild(h('div', { class: 'kvHead' },
+    h('span', null, '请求头'),
+    h('button', {
+      class: 'link', style: 'margin-left:auto',
+      onclick: () => {
+        const has = req.headers.some((x) => x.key.toLowerCase() === 'content-type' && x.enabled !== false);
+        if (has) { toast('已经有 Content-Type 了'); return; }
+        req.headers.push({ key: 'Content-Type', value: 'application/json', enabled: true });
+        markDirty();
+        refresh();
+      }
+    }, '＋ Content-Type')));
+  const box = h('div');
+  kvEditor(box, req.headers, refresh, 'key', 'value');
+  wrap.appendChild(box);
+  return wrap;
+}
+
+/** 通用 key/value 编辑器：总是多留一行空白，输入即落库 */
+function kvEditor(container, rows, refresh, _a, _b) {
+  clear(container);
+  const render = () => {
+    clear(container);
+    const all = rows.concat([{ key: '', value: '', enabled: true, __phantom: true }]);
+    all.forEach((row, index) => {
+      const isPhantom = row.__phantom === true;
+      const enabled = h('input', {
+        type: 'checkbox',
+        checked: row.enabled !== false,
+        onchange: (e) => {
+          if (isPhantom) return;
+          row.enabled = e.target.checked;
+          node.dataset.off = row.enabled ? '0' : '1';
+          markDirty();
+        }
+      });
+      const keyInput = h('input', {
+        type: 'text', class: 'k', value: row.key, placeholder: isPhantom ? 'key' : '',
+        spellcheck: 'false',
+        oninput: (e) => {
+          if (isPhantom) {
+            rows.push({ key: e.target.value, value: '', enabled: true });
+            markDirty();
+            render();
+            focusAt(rows.length - 1, 'k');
+            return;
+          }
+          row.key = e.target.value;
+          markDirty();
+        }
+      });
+      const valInput = h('input', {
+        type: 'text', class: 'v', value: row.value, placeholder: isPhantom ? 'value' : '',
+        spellcheck: 'false',
+        oninput: (e) => {
+          if (isPhantom) {
+            rows.push({ key: '', value: e.target.value, enabled: true });
+            markDirty();
+            render();
+            focusAt(rows.length - 1, 'v');
+            return;
+          }
+          row.value = e.target.value;
+          markDirty();
+        }
+      });
+      const node = h('div', { class: 'kvRow', 'data-off': row.enabled === false ? '1' : '0' },
+        isPhantom ? h('span', { style: 'width:13px;flex:none' }) : enabled,
+        keyInput, valInput,
+        isPhantom ? h('span', { style: 'width:16px;flex:none' }) : h('button', {
+          class: 'del', title: '删除这一行',
+          onclick: () => { rows.splice(index, 1); markDirty(); render(); }
+        }, '✕')
+      );
+      container.appendChild(node);
+    });
+  };
+  const focusAt = (rowIndex, which) => {
+    const nodes = container.querySelectorAll('.kvRow');
+    const node = nodes[rowIndex];
+    if (!node) return;
+    const input = node.querySelector('.' + which);
+    if (input) { input.focus(); const v = input.value; input.setSelectionRange(v.length, v.length); }
+  };
+  render();
+}
+
+/* ── 请求体 ── */
+
+/** GET / HEAD 一般不带请求体：浏览器直连发不出去，服务端也多半只读查询参数 */
+function canHaveBody(method) {
+  return method !== 'GET' && method !== 'HEAD';
+}
+
+/** 请求体里的字段名同时出现在查询参数里的那些 */
+function duplicateBodyKeys(req) {
+  if (req.body.mode !== 'urlencoded' && req.body.mode !== 'formdata') return [];
+  const paramKeys = new Set(
+    req.params.filter((p) => p.enabled !== false && p.key.trim()).map((p) => p.key.trim())
+  );
+  const seen = new Set();
+  for (const row of req.body.form) {
+    if (row.enabled === false || !row.key.trim()) continue;
+    const key = row.key.trim();
+    if (paramKeys.has(key)) seen.add(key);
+  }
+  return [...seen];
+}
+
+/** 把请求体里的字段一键同步到查询参数（同名覆盖，不同名追加） */
+function syncBodyToParams(req) {
+  if (req.body.mode !== 'urlencoded' && req.body.mode !== 'formdata') return 0;
+  let n = 0;
+  for (const row of req.body.form) {
+    if (row.enabled === false || !row.key.trim()) continue;
+    const key = row.key.trim();
+    const hit = req.params.find((p) => p.key.trim() === key);
+    if (hit) {
+      hit.value = row.value;
+      hit.enabled = true;
+    } else {
+      req.params.push({ key: key, value: row.value, enabled: true });
+    }
+    n++;
+  }
+  return n;
+}
+
+function bodyPanel(req, refresh) {
+  const wrap = h('div');
+  const modes = [
+    { key: 'none', label: '无' },
+    { key: 'raw', label: 'Raw' },
+    { key: 'urlencoded', label: 'x-www-form-urlencoded' },
+    { key: 'formdata', label: 'form-data' }
+  ];
+  const seg = h('div', { class: 'seg' }, modes.map((m) => h('button', {
+    'data-on': req.body.mode === m.key ? '1' : '0',
+    onclick: () => { req.body.mode = m.key; markDirty(); refresh(); }
+  }, m.label)));
+  wrap.appendChild(h('div', { class: 'bodyTools' }, seg));
+
+  if (req.body.mode !== 'none' && !canHaveBody(req.method)) {
+    const dup = duplicateBodyKeys(req);
+    wrap.appendChild(h('div', { class: 'warnBox' },
+      h('span', { class: 'grow' },
+        req.method + ' 请求一般不带请求体：浏览器直连根本发不出去，服务端也多半只看查询参数。'
+        + (dup.length ? '　（' + dup.join('、') + ' 在查询参数里也有一份）' : '')),
+      (req.body.mode === 'urlencoded' || req.body.mode === 'formdata')
+        ? h('button', {
+          class: 'btn',
+          onclick: () => {
+            const n = syncBodyToParams(req);
+            if (!n) { toast('请求体里没有可同步的字段', 'bad'); return; }
+            markDirty();
+            refresh();
+            if (state.ui && state.ui.paintUrlHint) state.ui.paintUrlHint();
+            toast('已把 ' + n + ' 个字段同步到查询参数', 'ok');
+          }
+        }, '把字段同步到查询参数')
+        : null));
+  }
+
+  if (req.body.mode === 'none') {
+    wrap.appendChild(h('div', { class: 'hint' }, '这个请求不带请求体。'));
+    return wrap;
+  }
+  if (req.body.mode === 'raw') {
+    const langs = ['json', 'xml', 'html', 'text'];
+    const langSeg = h('div', { class: 'seg' }, langs.map((l) => h('button', {
+      'data-on': (req.body.language || 'json') === l ? '1' : '0',
+      onclick: () => { req.body.language = l; markDirty(); refresh(); }
+    }, l.toUpperCase())));
+    const ta = h('textarea', {
+      class: 'codeArea', spellcheck: 'false', placeholder: '{"hello":"world"}',
+      value: req.body.raw,
+      oninput: (e) => { req.body.raw = e.target.value; markDirty(); paintValid(); }
+    });
+    const valid = h('span', { class: 'hint' });
+    function paintValid() {
+      if ((req.body.language || 'json') !== 'json') { valid.textContent = ''; return; }
+      const t = req.body.raw.trim();
+      if (!t) { valid.textContent = ''; return; }
+      try { JSON.parse(t); valid.className = 'hint'; valid.textContent = '✓ JSON 合法'; }
+      catch (err) { valid.className = 'hint warn'; valid.textContent = '✗ ' + err.message; }
+    }
+    wrap.appendChild(h('div', { class: 'bodyTools' },
+      langSeg,
+      h('button', {
+        class: 'btn', onclick: () => {
+          try { req.body.raw = JSON.stringify(JSON.parse(req.body.raw), null, 2); }
+          catch (err) { toast('不是合法 JSON：' + err.message, 'bad'); return; }
+          markDirty(); refresh();
+        }
+      }, '格式化'),
+      h('button', {
+        class: 'btn', onclick: () => {
+          try { req.body.raw = JSON.stringify(JSON.parse(req.body.raw)); }
+          catch (err) { toast('不是合法 JSON：' + err.message, 'bad'); return; }
+          markDirty(); refresh();
+        }
+      }, '压缩'),
+      valid));
+    wrap.appendChild(ta);
+    paintValid();
+    return wrap;
+  }
+  // urlencoded 用通用的 key/value；form-data 要能选文件，单独一套
+  if (req.body.mode === 'urlencoded') {
+    wrap.appendChild(h('div', { class: 'kvHead' }, h('span', null, '表单字段')));
+    const box = h('div');
+    kvEditor(box, req.body.form, refresh);
+    wrap.appendChild(box);
+    return wrap;
+  }
+  // form-data 接着往同一个 wrap 里画（bodyTools / 警示条都还在）
+  return formDataPanel(req, refresh, wrap);
+}
+
+/* ── form-data：文本 + 文件 ── */
+function formDataPanel(req, refresh, into) {
+  const wrap = into || h('div');
+  const multi = state.mode === 'host' ? '文件由本机代理读盘发送' : '文件由浏览器自己读取上传';
+  wrap.appendChild(h('div', { class: 'kvHead' },
+    h('span', null, '表单字段'),
+    h('span', { style: 'margin-left:auto' }, 'multipart/form-data · ' + multi)));
+
+  const box = h('div');
+
+  const fileInput = h('input', {
+    type: 'file',
+    style: 'display:none',
+    onchange: () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      const row = req.body.form.find((x) => x.id === pendingRowId);
+      if (row) {
+        row.fileName = file.name;
+        row.contentType = file.type || 'application/octet-stream';
+        state.formFiles.set(row.id, file);
+        markDirty();
+        refresh();
+        toast('已选择 ' + file.name + '（' + fmtBytes(file.size) + '）', 'ok');
+      }
+      fileInput.value = '';
+    }
+  });
+  let pendingRowId = '';
+
+  const render = () => {
+    clear(box);
+    for (const row of req.body.form) if (!row.id) row.id = uid('row');
+    const all = req.body.form.concat([{ id: '__phantom', key: '', value: '', enabled: true, type: 'text', __phantom: true }]);
+    for (const row of all) {
+      const isPhantom = row.__phantom === true;
+      const isFile = row.type === 'file';
+      const node = h('div', {
+        class: 'kvRow formRow',
+        'data-off': row.enabled === false ? '1' : '0'
+      },
+        isPhantom ? h('span', { style: 'width:13px;flex:none' }) : h('input', {
+          type: 'checkbox',
+          checked: row.enabled !== false,
+          onchange: (e) => {
+            row.enabled = e.target.checked;
+            node.dataset.off = row.enabled ? '0' : '1';
+            markDirty();
+          }
+        }),
+        h('input', {
+          type: 'text', class: 'k', value: row.key, placeholder: isPhantom ? 'key' : '',
+          spellcheck: 'false',
+          oninput: (e) => {
+            if (isPhantom) {
+              req.body.form.push({ id: uid('row'), key: e.target.value, value: '', enabled: true, type: 'text' });
+              markDirty();
+              render();
+              focusAt(req.body.form.length - 1, 'k');
+              return;
+            }
+            row.key = e.target.value;
+            markDirty();
+          }
+        }),
+        h('button', {
+          class: 'typeBtn' + (isFile ? ' on' : ''),
+          title: isFile ? '改成文本字段' : '改成文件字段',
+          disabled: isPhantom,
+          onclick: () => {
+            if (isPhantom) return;
+            row.type = isFile ? 'text' : 'file';
+            if (!isFile) { row.value = ''; } else { state.formFiles.delete(row.id); row.fileName = ''; }
+            markDirty();
+            render();
+          }
+        }, isFile ? '文件' : '文本'),
+        isFile
+          ? h('span', { class: 'filePick' },
+            h('button', {
+              class: 'btn',
+              onclick: () => {
+                if (isPhantom) return;
+                pendingRowId = row.id;
+                fileInput.click();
+              }
+            }, '选择文件…'),
+            h('span', { class: 'hint fileLabel', title: row.fileName || '' },
+              row.fileName
+                ? row.fileName + (state.formFiles.has(row.id) ? '（' + fmtBytes(state.formFiles.get(row.id).size) + '）' : '（需重新选择）')
+                : '未选择'))
+          : h('input', {
+            type: 'text', class: 'v', value: row.value, placeholder: isPhantom ? 'value' : '',
+            spellcheck: 'false',
+            oninput: (e) => {
+              if (isPhantom) {
+                req.body.form.push({ id: uid('row'), key: '', value: e.target.value, enabled: true, type: 'text' });
+                markDirty();
+                render();
+                focusAt(req.body.form.length - 1, 'v');
+                return;
+              }
+              row.value = e.target.value;
+              markDirty();
+            }
+          }),
+        isPhantom ? h('span', { style: 'width:16px;flex:none' }) : h('button', {
+          class: 'del', title: '删除这一行',
+          onclick: () => {
+            if (row.type === 'file') state.formFiles.delete(row.id);
+            req.body.form.splice(req.body.form.indexOf(row), 1);
+            markDirty();
+            render();
+          }
+        }, '✕')
+      );
+      box.appendChild(node);
+    }
+  };
+
+  const focusAt = (rowIndex, which) => {
+    const nodes = box.querySelectorAll('.formRow');
+    const node = nodes[rowIndex];
+    if (!node) return;
+    const input = node.querySelector('.' + which);
+    if (input) { input.focus(); const v = input.value; input.setSelectionRange(v.length, v.length); }
+  };
+
+  render();
+  wrap.appendChild(box);
+  wrap.appendChild(fileInput);
+  return wrap;
+}
+
+/* ── 认证 ── */
+function authPanel(req) {
+  const wrap = h('div');
+  const types = [
+    { key: 'none', label: '无' },
+    { key: 'bearer', label: 'Bearer Token' },
+    { key: 'basic', label: 'Basic Auth' },
+    { key: 'apikey', label: 'API Key' }
+  ];
+  wrap.appendChild(h('div', { class: 'field' },
+    h('label', null, '认证方式'),
+    h('select', {
+      onchange: (e) => { req.auth.type = e.target.value; markDirty(); renderEditor(); }
+    }, types.map((t) => h('option', { value: t.key, selected: req.auth.type === t.key }, t.label)))));
+
+  if (req.auth.type === 'bearer') {
+    wrap.appendChild(h('div', { class: 'field' },
+      h('label', null, 'Token（自动加 Authorization: Bearer …）'),
+      h('input', {
+        type: 'text', value: req.auth.token, placeholder: 'eyJhbGciOi…',
+        oninput: (e) => { req.auth.token = e.target.value; markDirty(); }
+      })));
+  } else if (req.auth.type === 'basic') {
+    wrap.appendChild(h('div', { class: 'fieldRow' },
+      h('div', { class: 'field' },
+        h('label', null, '用户名'),
+        h('input', { type: 'text', value: req.auth.username, oninput: (e) => { req.auth.username = e.target.value; markDirty(); } })),
+      h('div', { class: 'field' },
+        h('label', null, '密码'),
+        h('input', { type: 'password', value: req.auth.password, oninput: (e) => { req.auth.password = e.target.value; markDirty(); } }))));
+  } else if (req.auth.type === 'apikey') {
+    wrap.appendChild(h('div', { class: 'fieldRow' },
+      h('div', { class: 'field' },
+        h('label', null, '参数名'),
+        h('input', { type: 'text', value: req.auth.key, placeholder: 'X-Api-Key', oninput: (e) => { req.auth.key = e.target.value; markDirty(); } })),
+      h('div', { class: 'field' },
+        h('label', null, '参数值'),
+        h('input', { type: 'text', value: req.auth.value, oninput: (e) => { req.auth.value = e.target.value; markDirty(); } }))));
+    wrap.appendChild(h('div', { class: 'field' },
+      h('label', null, '放在哪里'),
+      h('select', { onchange: (e) => { req.auth.addTo = e.target.value; markDirty(); } },
+        h('option', { value: 'header', selected: req.auth.addTo === 'header' }, '请求头'),
+        h('option', { value: 'query', selected: req.auth.addTo === 'query' }, '查询参数'))));
+  } else {
+    wrap.appendChild(h('div', { class: 'hint' }, '不额外加认证信息；需要什么头部直接写在「请求头」里。'));
+  }
+  return wrap;
+}
+
+function notePanel(req) {
+  return h('div', null,
+    h('div', { class: 'hint', style: 'margin-bottom:6px' }, '备注只存在本地 JSON 里，不影响请求。'),
+    h('textarea', {
+      class: 'noteArea', placeholder: '这个接口是干什么的、参数怎么填、坑在哪…',
+      value: req.note,
+      oninput: (e) => { req.note = e.target.value; markDirty(); }
+    }));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   9. 渲染 · 响应
+   ═══════════════════════════════════════════════════════════════════ */
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>]/g, (c) => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'));
+}
+
+function highlightJson(text) {
+  const re = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = re.exec(text))) {
+    out += escapeHtml(text.slice(last, m.index));
+    if (m[1]) {
+      out += '<span class="j-' + (m[2] ? 'k' : 's') + '">' + escapeHtml(m[1]) + '</span>';
+      if (m[2]) out += escapeHtml(m[2]);
+    } else if (m[3]) {
+      out += '<span class="j-l">' + m[3] + '</span>';
+    } else {
+      out += '<span class="j-n">' + m[4] + '</span>';
+    }
+    last = re.lastIndex;
+  }
+  out += escapeHtml(text.slice(last));
+  return out;
+}
+
+/** 把一段 XML/HTML 按标签层级缩进，纯文本内容保持原样。 */
+function prettyMarkup(text) {
+  const src = String(text).replace(/\r\n/g, '\n').trim();
+  if (!src) return src;
+  const tokens = src.replace(/>\s*</g, '><').split(/(?=<)/);
+  let depth = 0;
+  const out = [];
+  for (const token of tokens) {
+    const t = token.trim();
+    if (!t) continue;
+    const closing = /^<\//.test(t);
+    const selfClosing = /\/>$/.test(t) || /^<[!?]/.test(t);
+    if (closing) depth = Math.max(0, depth - 1);
+    out.push('  '.repeat(depth) + t);
+    if (!closing && !selfClosing && /^<[a-zA-Z]/.test(t)) depth += 1;
+  }
+  return out.join('\n');
+}
+
+/** 去掉 BOM 和 XSSI 前缀，尽量把 JSON 认出来 */
+function stripJsonNoise(text) {
+  let s = String(text);
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+  s = s.replace(/^\s*\)\]\}'\s*/, '');
+  return s;
+}
+
+function countJsonNodes(value, budget) {
+  let n = 0;
+  const walk = (v, depth) => {
+    if (n > budget) return;
+    n++;
+    if (v && typeof v === 'object' && depth < 40) {
+      for (const k of Object.keys(v)) {
+        walk(v[k], depth + 1);
+        if (n > budget) return;
+      }
+    }
+  };
+  walk(value, 0);
+  return n;
+}
+
+const JT_MAX_NODES = 8000;
+const JT_MAX_CHILDREN = 400;
+
+function jsonPrimitive(v) {
+  if (v === null) return h('span', { class: 'jt-null' }, 'null');
+  if (typeof v === 'string') {
+    const text = v.length > 240 ? v.slice(0, 240) + '…' : v;
+    return h('span', { class: 'jt-str', title: v.length > 240 ? v : null }, JSON.stringify(text));
+  }
+  if (typeof v === 'number') return h('span', { class: 'jt-num' }, String(v));
+  if (typeof v === 'boolean') return h('span', { class: 'jt-bool' }, String(v));
+  return h('span', { class: 'jt-other' }, String(v));
+}
+
+function jsonTreeNode(key, value, depth, expandDepth) {
+  const isArray = Array.isArray(value);
+  const isContainer = value !== null && typeof value === 'object';
+
+  // 根节点不占一行，直接把它的成员铺出来
+  if (key === null && isContainer) {
+    const wrap = h('div', { class: 'jt-node jt-root' });
+    const entries = isArray ? value.map((v, i) => [String(i), v]) : Object.keys(value).map((k) => [k, value[k]]);
+    for (const [k, v] of entries) wrap.appendChild(jsonTreeNode(k, v, 0, expandDepth));
+    if (!entries.length) wrap.appendChild(h('div', { class: 'jt-emptyrow' }, isArray ? '[] 空数组' : '{} 空对象'));
+    return wrap;
+  }
+
+  const wrap = h('div', { class: 'jt-node' });
+  const row = h('div', {
+    class: 'jt-row' + (isContainer ? ' jt-toggle' : ''),
+    style: { paddingLeft: (6 + depth * 14) + 'px' }
+  });
+  const kids = h('div', { class: 'jt-kids' });
+  let built = false;
+  let open = false;
+
+  const caret = h('span', { class: 'jt-caret' + (isContainer ? '' : ' jt-caret-empty') });
+  row.appendChild(caret);
+
+  if (key !== null) {
+    row.appendChild(h('span', { class: 'jt-key' + (/^\d+$/.test(key) ? ' jt-key-idx' : '') }, key));
+    row.appendChild(h('span', { class: 'jt-colon' }, isArray && /^\d+$/.test(key) ? ':' : ': '));
+  }
+
+  const summary = h('span', { class: 'jt-sum' });
+  row.appendChild(summary);
+
+  function build() {
+    if (built) return;
+    built = true;
+    const entries = isArray
+      ? value.map((v, i) => [String(i), v])
+      : Object.keys(value).map((k) => [k, value[k]]);
+    const limit = Math.min(entries.length, JT_MAX_CHILDREN);
+    for (let i = 0; i < limit; i++) {
+      kids.appendChild(jsonTreeNode(entries[i][0], entries[i][1], depth + 1, expandDepth));
+    }
+    if (entries.length > limit) {
+      kids.appendChild(h('div', {
+        class: 'jt-more',
+        style: { paddingLeft: (6 + (depth + 1) * 14) + 'px' },
+        onclick: (e) => {
+          e.stopPropagation();
+          moreRow.remove();
+          for (let i = limit; i < entries.length && i < limit + JT_MAX_CHILDREN; i++) {
+            kids.appendChild(jsonTreeNode(entries[i][0], entries[i][1], depth + 1, expandDepth));
+          }
+          if (entries.length > limit + JT_MAX_CHILDREN) {
+            const next = h('div', {
+              class: 'jt-more',
+              style: { paddingLeft: (6 + (depth + 1) * 14) + 'px' },
+              onclick: (ev) => { ev.stopPropagation(); moreRow.after(next); void 0; }
+            }, '…还有 ' + (entries.length - limit - JT_MAX_CHILDREN) + ' 项（点开继续）');
+            kids.appendChild(next);
+          }
+        }
+      }, '…还有 ' + (entries.length - limit) + ' 项，点开显示'));
+      const moreRow = kids.lastChild;
+    }
+  }
+
+  function paint() {
+    row.dataset.open = open ? '1' : '0';
+    caret.textContent = isContainer ? (open ? '▾' : '▸') : '';
+    clear(summary);
+    if (!isContainer) {
+      summary.appendChild(jsonPrimitive(value));
+      return;
+    }
+    if (!open) {
+      summary.appendChild(h('span', { class: 'jt-preview' },
+        isArray ? '[' : '{',
+        h('span', { class: 'jt-count' }, String(isArray ? value.length : Object.keys(value).length) + ' 项'),
+        isArray ? ']' : '}'));
+    }
+    kids.hidden = !open;
+  }
+
+  function setOpen(next) {
+    open = next;
+    if (open) build();
+    paint();
+  }
+
+  if (isContainer) {
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setOpen(!open);
+    });
+  }
+
+  wrap.appendChild(row);
+  wrap.appendChild(kids);
+  wrap.__setOpen = setOpen;
+  wrap.__isContainer = isContainer;
+  if (isContainer && depth < expandDepth) setOpen(true);
+  else paint();
+  return wrap;
+}
+
+function jsonTreeView(value) {
+  return jsonTreeNode(null, value, 0, 2);
+}
+
+/** 把整棵树按给定深度重铺一遍（展开全部 / 收起全部） */
+function repaintTree(container, value, expandDepth) {
+  clear(container);
+  container.appendChild(jsonTreeNode(null, value, 0, expandDepth));
+}
+
+function prettyBody(resp) {
+  const raw = str(resp.body);
+  const text = stripJsonNoise(raw).trim() ? raw : raw;
+  const ct = (resp.headers || []).filter(([k]) => k.toLowerCase() === 'content-type').map(([, v]) => v).join(';');
+  const looksJson = /json/i.test(ct) || /^\s*[\[{]/.test(stripJsonNoise(text));
+  if (looksJson && text.trim()) {
+    try {
+      const value = JSON.parse(stripJsonNoise(text));
+      return { text: JSON.stringify(value, null, 2), kind: 'json', value: value };
+    } catch (_) { /* 不是合法 JSON，按原样 */ }
+  }
+  const looksMarkup = /xml|html/i.test(ct) || /^\s*</.test(text);
+  if (looksMarkup && text.trim()) return { text: prettyMarkup(raw), kind: 'markup' };
+  return { text: text, kind: 'text' };
+}
+
+function renderResponse() {
+  const box = state.ui && state.ui.resp;
+  if (!box) return;
+  clear(box);
+  const resp = state.response;
+
+  const bar = h('div', { class: 'respBar' });
+  const bodyArea = h('div', { class: 'respBody' });
+
+  if (state.sending) {
+    bar.appendChild(h('span', { class: 'status', 'data-k': '3' }, '发送中…'));
+    bar.appendChild(h('span', { class: 'meta' }, state.mode === 'host' ? '本机代理' : '浏览器直连'));
+    box.appendChild(bar);
+    box.appendChild(h('div', { class: 'respEmpty' }, h('span', { class: 'spin', style: 'border-color:var(--line2);border-top-color:var(--accent)' }), '等待响应…'));
+    return;
+  }
+  if (!resp) {
+    bar.appendChild(h('span', null, '响应'));
+    box.appendChild(bar);
+    box.appendChild(h('div', { class: 'respEmpty' }, '点「发送」看结果（Ctrl + Enter）'));
+    return;
+  }
+  if (resp.aborted) {
+    bar.appendChild(h('span', { class: 'status', 'data-k': '4' }, '已取消'));
+    bar.appendChild(h('span', { class: 'meta' }, resp.timeMs + ' ms'));
+    box.appendChild(bar);
+    box.appendChild(h('div', { class: 'respEmpty' }, '请求被取消'));
+    return;
+  }
+  if (resp.error) {
+    bar.appendChild(h('span', { class: 'status', 'data-k': '0' }, '失败'));
+    bar.appendChild(h('span', { class: 'meta' }, resp.timeMs + ' ms'));
+    box.appendChild(bar);
+    box.appendChild(h('div', { class: 'respErr', text: resp.error + '\n\n' + (resp.requestUrl || '') }));
+    return;
+  }
+
+  const code = Number(resp.status) || 0;
+  const kind = String(code).slice(0, 1) || '0';
+  bar.appendChild(h('span', { class: 'status', 'data-k': kind }, code + ' ' + (resp.statusText || '')));
+  bar.appendChild(h('span', { class: 'meta' }, resp.timeMs + ' ms'));
+  bar.appendChild(h('span', { class: 'meta' }, fmtBytes(resp.size)));
+  bar.appendChild(h('span', { class: 'via' }, resp.via || ''));
+
+  const body = prettyBody(resp);
+  const nodeCount = body.kind === 'json' ? countJsonNodes(body.value, JT_MAX_NODES + 1) : 0;
+  const treeable = body.kind === 'json' && nodeCount <= JT_MAX_NODES;
+  const lineCount = body.text ? body.text.split('\n').length : 0;
+  bar.appendChild(h('span', { class: 'meta' }, lineCount + ' 行'));
+  const seg = h('div', { class: 'seg' },
+    h('button', {
+      'data-on': state.respTab === 'body' ? '1' : '0',
+      onclick: () => { state.respTab = 'body'; renderResponse(); }
+    }, '正文'),
+    h('button', {
+      'data-on': state.respTab === 'headers' ? '1' : '0',
+      onclick: () => { state.respTab = 'headers'; renderResponse(); }
+    }, '响应头 ', h('span', { class: 'cnt' }, String((resp.headers || []).length)))
+  );
+  bar.appendChild(seg);
+
+  if (state.respTab === 'body' && (treeable || body.kind === 'json')) {
+    bar.appendChild(h('div', { class: 'seg' },
+      treeable ? h('button', {
+        'data-on': state.respView === 'tree' ? '1' : '0',
+        onclick: () => { state.respView = 'tree'; try { localStorage.setItem('apihub.respView', 'tree'); } catch (_) { /* 忽略 */ } renderResponse(); }
+      }, '树') : null,
+      h('button', {
+        'data-on': state.respView === 'raw' || !treeable ? '1' : '0',
+        onclick: () => { state.respView = 'raw'; try { localStorage.setItem('apihub.respView', 'raw'); } catch (_) { /* 忽略 */ } renderResponse(); }
+      }, '文本')));
+  }
+
+  bar.appendChild(h('button', {
+    class: 'btn', style: 'height:24px;padding:0 8px',
+    onclick: async () => {
+      const ok = await copyText(state.respTab === 'headers'
+        ? (resp.headers || []).map(([k, v]) => k + ': ' + v).join('\n')
+        : body.text);
+      toast(ok ? '已复制' : '复制失败', ok ? 'ok' : 'bad');
+    }
+  }, '复制'));
+  bar.appendChild(h('button', {
+    class: 'btn', style: 'height:24px;padding:0 8px',
+    title: '把请求编辑区收起来，只看响应',
+    onclick: () => {
+      state.respFocus = !state.respFocus;
+      const pane = document.querySelector('.pane');
+      if (pane) pane.classList.toggle('respFocus', state.respFocus);
+      try { localStorage.setItem('apihub.respFocus', state.respFocus ? '1' : '0'); } catch (_) { /* 忽略 */ }
+      renderResponse();
+    }
+  }, state.respFocus ? '⤡ 还原' : '⤢ 放大'));
+  bar.appendChild(h('button', {
+    class: 'btn', style: 'height:24px;padding:0 8px',
+    onclick: () => downloadText('response-' + code + '.txt', state.respTab === 'headers'
+      ? (resp.headers || []).map(([k, v]) => k + ': ' + v).join('\n')
+      : body.text)
+  }, '下载'));
+
+  box.appendChild(bar);
+
+  if (state.respTab === 'headers') {
+    const table = h('table', { class: 'hdrTable' }, (resp.headers || []).map(([k, v]) => h('tr', null,
+      h('td', { text: k }), h('td', { text: v }))));
+    bodyArea.appendChild(table);
+  } else if (!body.text) {
+    bodyArea.appendChild(h('div', { class: 'respEmpty' }, '空响应体'));
+  } else if (treeable && state.respView === 'tree') {
+    const treeHost = h('div', { class: 'jt' });
+    treeHost.appendChild(jsonTreeNode(null, body.value, 0, 2));
+    const tools = h('div', { class: 'treeTools' },
+      h('button', { class: 'link', onclick: () => repaintTree(treeHost, body.value, 40) }, '展开全部'),
+      h('button', { class: 'link', onclick: () => repaintTree(treeHost, body.value, 1) }, '收起'),
+      h('span', { class: 'grow' }),
+      h('span', { class: 'hint', style: 'margin:0' }, nodeCount + ' 个节点'));
+    bodyArea.appendChild(tools);
+    bodyArea.appendChild(treeHost);
+  } else {
+    const shown = body.text.length > 400000 ? body.text.slice(0, 400000) + '\n\n…（内容过长，已截断显示）' : body.text;
+    bodyArea.appendChild(h('pre', {
+      class: 'plain',
+      html: body.kind === 'json' ? highlightJson(shown) : escapeHtml(shown)
+    }));
+  }
+  box.appendChild(bodyArea);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   10. 增删改
+   ═══════════════════════════════════════════════════════════════════ */
+
+function persistOpenFolders() {
+  try {
+    localStorage.setItem(LS_KEY.open, JSON.stringify(state.openFolders));
+    localStorage.setItem(LS_KEY.openCollections, JSON.stringify(state.openCollections));
+  } catch (_) { /* 忽略 */ }
+}
+
+function ensureCollection() {
+  if (!state.data.collections.length) {
+    const c = emptyCollection({ name: '我的接口' });
+    state.data.collections.push(c);
+    state.lastCollectionId = c.id;
+    return c.id;
+  }
+  return currentCollectionId();
+}
+
+function addRequest(folderId, collectionId) {
+  const cid = collectionId || ensureCollection();
+  const folder = folderId ? state.data.folders.find((f) => f.id === folderId) : null;
+  const req = emptyRequest({
+    name: '新建接口',
+    collectionId: folder ? folder.collectionId : cid,
+    folderId: folderId || null,
+    url: (function () {
+      const vars = varMap(state.data, folder ? folder.collectionId : cid);
+      return vars.baseUrl ? vars.baseUrl + '/' : '';
+    })()
+  });
+  state.data.requests.push(req);
+  state.selectedId = req.id;
+  state.lastCollectionId = req.collectionId;
+  state.tab = 'params';
+  markDirty();
+  renderSidebar();
+  renderEditor();
+  const input = $('.nameInput');
+  if (input) { input.focus(); input.select(); }
+}
+
+async function renameRequest(r) {
+  const name = await askText('重命名接口', r.name, '接口名字');
+  if (name === null) return;
+  r.name = name.trim() || r.name;
+  markDirty();
+  renderSidebar();
+  renderEditor();
+}
+
+function duplicateRequest(r) {
+  const copy = normalizeRequest(JSON.parse(JSON.stringify(r)));
+  copy.id = uid('r');
+  copy.name = r.name + ' 副本';
+  copy.createdAt = nowIso();
+  copy.updatedAt = copy.createdAt;
+  const at = state.data.requests.indexOf(r);
+  state.data.requests.splice(at + 1, 0, copy);
+  state.selectedId = copy.id;
+  markDirty();
+  renderSidebar();
+  renderEditor();
+  toast('已复制');
+}
+
+async function removeRequest(r) {
+  const ok = await askConfirm('删除接口', '确定删除「' + r.name + '」？删了就找不回来了。', '删除');
+  if (!ok) return;
+  const at = state.data.requests.indexOf(r);
+  if (at >= 0) state.data.requests.splice(at, 1);
+  if (state.selectedId === r.id) state.selectedId = null;
+  markDirty();
+  renderSidebar();
+  renderEditor();
+}
+
+async function addFolder(collectionId) {
+  const cid = collectionId || ensureCollection();
+  const name = await askText('新建分组', '新分组', '分组名字');
+  if (name === null) return;
+  state.data.folders.push({ id: uid('f'), collectionId: cid, name: name.trim() || '新分组', parentId: null });
+  markDirty();
+  renderSidebar();
+}
+
+async function renameFolder(f) {
+  const name = await askText('重命名分组', f.name, '分组名字');
+  if (name === null) return;
+  f.name = name.trim() || f.name;
+  markDirty();
+  renderSidebar();
+}
+
+function collectFolderIds(rootId) {
+  const ids = new Set([rootId]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const x of state.data.folders) {
+      if (ids.has(x.id)) continue;
+      if (x.parentId && ids.has(x.parentId)) { ids.add(x.id); grew = true; }
+    }
+  }
+  return ids;
+}
+
+async function removeFolder(f) {
+  const ids = collectFolderIds(f.id);
+  const inside = state.data.requests.filter((r) => r.folderId && ids.has(r.folderId));
+  const ok = await askConfirm('删除分组',
+    '删除「' + f.name + '」？里面的 ' + inside.length + ' 个接口会移到' + (f.parentId ? '上一级' : '集合根目录') + '。', '删除');
+  if (!ok) return;
+  for (const r of inside) r.folderId = f.parentId || null;
+  state.data.folders = state.data.folders.filter((x) => !ids.has(x.id));
+  markDirty();
+  renderSidebar();
+  renderEditor();
+}
+
+/* ── 集合 ── */
+
+function newCollection() {
+  const c = emptyCollection({ name: uniqueName('新建集合', new Set(state.data.collections.map((x) => x.name))) });
+  state.data.collections.push(c);
+  state.openCollections[c.id] = true;
+  state.lastCollectionId = c.id;
+  markDirty();
+  renderSidebar();
+  return c;
+}
+
+async function renameCollection(c) {
+  const info = await collectionDialog(c);
+  if (!info) return;
+  c.name = info.name || c.name;
+  c.description = info.description;
+  c.updatedAt = nowIso();
+  markDirty();
+  if (info.move) moveCollectionStep(c, info.move === 'up' ? -1 : 1);
+  renderSidebar();
+  renderEditor();
+}
+
+/** 上移/下移一格（拖动的键盘/触屏替代） */
+function moveCollectionStep(c, delta) {
+  const list = state.data.collections;
+  const at = list.indexOf(c);
+  const to = at + delta;
+  if (at < 0 || to < 0 || to >= list.length) return;
+  list.splice(at, 1);
+  list.splice(to, 0, c);
+  markDirty();
+}
+
+/** 集合信息：名字 + 说明 + 变量 + 导出 + 顺序 */
+function collectionDialog(c) {
+  return new Promise((resolve) => {
+    const nameInput = h('input', { class: 'textInput', value: c.name, placeholder: '集合名字' });
+    const descInput = h('textarea', { class: 'noteArea', style: 'min-height:64px', placeholder: '说明（可选）' });
+    descInput.value = c.description || '';
+    const varsBox = h('div', { style: 'margin-top:10px' });
+    kvEditor(varsBox, c.variables, () => { /* 就地编辑 */ });
+    const at = state.data.collections.indexOf(c);
+    const total = state.data.collections.length;
+    const body = h('div', null,
+      h('div', { class: 'field' }, h('label', null, '集合名字'), nameInput),
+      h('div', { class: 'field' }, h('label', null, '说明'), descInput),
+      h('div', { class: 'hint', style: 'margin-top:8px' }, '这个集合自己的变量（会盖过全局变量，比如 baseUrl、token）'),
+      varsBox,
+      h('div', { class: 'hint', style: 'margin-top:10px' }, (cCount() + ' 个接口 · ' + cFolderCount() + ' 个分组')),
+      h('div', { style: 'margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap' },
+        h('span', { class: 'hint', style: 'margin:0' }, '顺序 ' + (at + 1) + ' / ' + total),
+        h('button', {
+          class: 'btn', disabled: at <= 0,
+          onclick: () => { markDirty(); close({ name: nameInput.value.trim(), description: descInput.value, move: 'up' }); }
+        }, '↑ 上移'),
+        h('button', {
+          class: 'btn', disabled: at < 0 || at >= total - 1,
+          onclick: () => { markDirty(); close({ name: nameInput.value.trim(), description: descInput.value, move: 'down' }); }
+        }, '↓ 下移'),
+        h('button', {
+          class: 'btn',
+          onclick: () => {
+            downloadText(safeFileName(c.name) + '.postman_collection.json', JSON.stringify(toPostman(state.data, c.id), null, 2));
+            toast('已导出「' + c.name + '」', 'ok');
+          }
+        }, '导出为 Postman'))
+    );
+    function cCount() { return state.data.requests.filter((r) => r.collectionId === c.id).length; }
+    function cFolderCount() { return state.data.folders.filter((f) => f.collectionId === c.id).length; }
+
+    const host = $('#modalHost');
+    host.hidden = false;
+    clear(host);
+    let done = false;
+    const close = (value) => {
+      if (done) return;
+      done = true;
+      host.hidden = true;
+      clear(host);
+      resolve(value);
+    };
+    host.appendChild(h('div', { class: 'modal' },
+      h('div', { class: 'modalHead' }, h('b', null, '集合'), h('button', { class: 'x', onclick: () => close(null) }, '✕')),
+      h('div', { class: 'modalBody' }, body),
+      h('div', { class: 'modalFoot' },
+        h('button', { class: 'btn', onclick: () => close(null) }, '取消'),
+        h('button', {
+          class: 'btn primary',
+          onclick: () => {
+            markDirty();
+            close({ name: nameInput.value.trim(), description: descInput.value });
+          }
+        }, '保存'))));
+    host.onclick = (e) => { if (e.target === host) close(null); };
+    setTimeout(() => { nameInput.focus(); nameInput.select(); }, 30);
+  });
+}
+
+function safeFileName(name) {
+  return String(name || 'api-hub').replace(/[\\/:*?"<>|]/g, '_').slice(0, 80);
+}
+
+async function removeCollection(c) {
+  const ids = new Set(state.data.folders.filter((f) => f.collectionId === c.id).map((f) => f.id));
+  const inside = state.data.requests.filter((r) => r.collectionId === c.id);
+  const ok = await askConfirm('删除集合',
+    '删除集合「' + c.name + '」？里面的 ' + inside.length + ' 个接口、' + ids.size + ' 个分组会一起删掉，不能撤销。', '删除');
+  if (!ok) return;
+  state.data.folders = state.data.folders.filter((f) => f.collectionId !== c.id);
+  state.data.requests = state.data.requests.filter((r) => r.collectionId !== c.id);
+  state.data.collections = state.data.collections.filter((x) => x.id !== c.id);
+  if (state.selectedId && !state.data.requests.some((r) => r.id === state.selectedId)) state.selectedId = null;
+  if (state.lastCollectionId === c.id) state.lastCollectionId = '';
+  markDirty();
+  renderSidebar();
+  renderEditor();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   11. 导入 / 导出 / 变量
+   ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * 导进当前数据文件。一次一个 JSON；多文件由调用方逐个喂进来。
+ * @param {object} json
+ * @param {{sameName?: 'new'|'merge'|'ask'}} [opts]
+ */
+async function doImport(json, opts) {
+  const kind = detectFormat(json);
+  if (kind === 'postman-env') {
+    const values = json.values || (json.environment && json.environment.values) || [];
+    let n = 0;
+    for (const v of values) {
+      if (!v || !v.key) continue;
+      const found = state.data.variables.find((x) => x.key === v.key);
+      if (found) found.value = str(v.value);
+      else state.data.variables.push({ key: str(v.key), value: str(v.value), enabled: v.enabled !== false });
+      n++;
+    }
+    markDirty();
+    renderEditor();
+    toast('已导入环境变量 ' + n + ' 个', 'ok');
+    return n;
+  }
+  if (kind === 'unknown') { toast('认不出这个 JSON 的格式', 'bad'); return 0; }
+
+  // API-HUB 自己的数据文件：整套并进来
+  if (kind === 'apihub') {
+    const n = importHubData(state.data, json);
+    state.loaded = true;
+    markDirty();
+    renderSidebar();
+    renderEditor();
+    toast('已合并 ' + n.collections + ' 个集合、' + n.added + ' 个接口', 'ok');
+    return n.added;
+  }
+
+  const parsed = kind === 'postman1' ? parsePostmanV1(json) : parsePostmanCollection(json);
+  parsed.description = parsed.description || '';
+  state.loaded = true;
+
+  // 已经有同名集合：问一下是新建还是合并
+  const same = state.data.collections.filter((c) => c.name === parsed.name);
+  let mode = opts && opts.sameName ? opts.sameName : (same.length ? 'ask' : 'new');
+  if (mode === 'ask' && same.length) {
+    const choice = await modal({
+      title: '已存在同名集合',
+      body: h('p', null,
+        '已经有一个叫「', h('b', null, parsed.name), '」的集合了（' +
+        state.data.requests.filter((r) => r.collectionId === same[0].id).length + ' 个接口）。要怎么处理？'),
+      actions: [
+        { label: '取消', value: null },
+        { label: '合并进去', value: 'merge' },
+        { label: '新建一个', primary: true, value: 'new' }
+      ]
+    });
+    if (!choice) return 0;
+    mode = choice;
+  }
+
+  if (mode === 'merge') {
+    const n = mergeIntoCollection(state.data, same[0].id, parsed);
+    markDirty();
+    renderSidebar();
+    renderEditor();
+    toast(n.added
+      ? '已合并「' + parsed.name + '」：新增 ' + n.added + ' 个' + (n.skipped ? '，跳过重复 ' + n.skipped + ' 个' : '')
+      : '「' + parsed.name + '」没有新接口（跳过重复 ' + n.skipped + ' 个）', n.added ? 'ok' : undefined);
+    return n.added;
+  }
+
+  const collection = buildCollection(state.data, parsed);
+  state.openCollections[collection.id] = true;
+  state.lastCollectionId = collection.id;
+  markDirty();
+  renderSidebar();
+  renderEditor();
+  const count = state.data.requests.filter((r) => r.collectionId === collection.id).length;
+  toast('已导入「' + collection.name + '」：' + count + ' 个接口', 'ok');
+  return count;
+}
+
+async function importDialog() {
+  const body = h('div');
+  const status = h('div', { class: 'hint' });
+  const picked = [];
+  const area = h('textarea', {
+    class: 'codeArea', style: 'min-height:180px',
+    placeholder: '把 Postman Collection v2.1 导出的 JSON 粘进来，或者点下面的「选择文件」（可多选，一次导入多个集合）'
+  });
+  body.appendChild(h('p', null,
+    '支持 Postman ', h('b', null, 'Collection v2.1 / v2.0 / v1'), '，以及 Postman 环境变量导出、API-HUB 自己的 JSON。一次可以选多个文件，每个集合会变成左侧的一个「集合」。'));
+  body.appendChild(area);
+  body.appendChild(h('div', { style: 'display:flex;gap:8px;align-items:center;margin-top:8px' },
+    h('button', {
+      class: 'btn', onclick: async () => {
+        const files = await pickTextFiles();
+        if (!files.length) return;
+        picked.length = 0;
+        picked.push(...files);
+        area.value = '';
+        status.textContent = '已选 ' + files.length + ' 个文件：' + files.map((f) => f.name).join('、');
+      }
+    }, '选择文件…'),
+    status));
+
+  const ok = await modal({
+    title: '导入接口',
+    body: body,
+    actions: [
+      { label: '取消', value: false },
+      { label: '导入', primary: true, value: true }
+    ]
+  });
+  if (!ok) return;
+
+  // 多文件优先：一次把多个 collection 并进同一个数据文件
+  if (picked.length) {
+    let added = 0;
+    const failed = [];
+    for (const file of picked) {
+      try {
+        const json = JSON.parse(file.text);
+        added += Number(await doImport(json, { sameName: 'new' })) || 0;
+      } catch (err) {
+        failed.push(file.name + '（' + err.message + '）');
+      }
+    }
+    if (failed.length) toast('有 ' + failed.length + ' 个文件没导入：' + failed.slice(0, 3).join('；'), 'bad');
+    else toast('已导入 ' + picked.length + ' 个集合，新增 ' + added + ' 个接口', 'ok');
+    return;
+  }
+
+  const text = area.value.trim();
+  if (!text) { toast('没内容可导入', 'bad'); return; }
+  let json;
+  try { json = JSON.parse(text); }
+  catch (err) { toast('JSON 解析失败：' + err.message, 'bad'); return; }
+  await doImport(json);
+}
+
+function pickTextFiles() {
+  return new Promise((resolve) => {
+    const input = $('#fileInput');
+    input.value = '';
+    input.onchange = async () => {
+      const files = Array.from(input.files || []);
+      if (!files.length) return resolve([]);
+      const out = [];
+      for (const file of files) out.push({ name: file.name, text: await file.text() });
+      resolve(out);
+    };
+    input.click();
+  });
+}
+
+function pickTextFile() {
+  return new Promise((resolve) => {
+    const input = $('#fileInput');
+    input.value = '';
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return resolve(null);
+      resolve(await file.text());
+    };
+    input.click();
+  });
+}
+
+async function exportDialog() {
+  const body = h('div');
+  body.appendChild(h('p', null, '把接口导出成本地文件：备份、发给别人，或者再导回 Postman。'));
+
+  const scopeSel = h('select', { class: 'textInput', style: 'height:32px' });
+  scopeSel.appendChild(h('option', { value: '' }, '全部集合（' + state.data.collections.length + ' 个）'));
+  for (const c of state.data.collections) {
+    scopeSel.appendChild(h('option', { value: c.id }, '只导出：' + c.name));
+  }
+
+  const nameInput = h('input', { class: 'textInput', value: state.data.name || 'api-hub' });
+
+  body.appendChild(h('div', { class: 'field' }, h('label', null, '范围'), scopeSel));
+  body.appendChild(h('div', { class: 'field' }, h('label', null, '文件名（不带扩展名）'), nameInput));
+  body.appendChild(h('ul', { class: 'hint' },
+    h('li', null, 'Postman Collection v2.1：Postman 里 Import 就能打开；只导一个集合时是标准的单集合文件'),
+    h('li', null, 'API-HUB JSON：就是存盘格式，可以直接当数据文件用')));
+
+  const choice = await modal({
+    title: '导出',
+    body: body,
+    actions: [
+      { label: '取消', value: null },
+      { label: 'API-HUB JSON', value: 'hub' },
+      { label: 'Postman v2.1', primary: true, value: 'postman' }
+    ]
+  });
+  if (!choice) return;
+
+  const cid = scopeSel.value;
+  const scopeName = cid ? collectionName(cid) : (state.data.name || 'api-hub');
+  const base = safeFileName(nameInput.value && !cid ? nameInput.value : scopeName);
+  if (choice === 'postman') {
+    downloadText(base + '.postman_collection.json', JSON.stringify(toPostman(state.data, cid || undefined), null, 2));
+  } else if (cid) {
+    const one = emptyHub();
+    one.name = scopeName;
+    one.collections = state.data.collections.filter((c) => c.id === cid);
+    one.folders = state.data.folders.filter((f) => f.collectionId === cid);
+    one.requests = state.data.requests.filter((r) => r.collectionId === cid);
+    one.variables = state.data.variables.slice();
+    downloadText(base + '.json', JSON.stringify(one, null, 2));
+  } else {
+    downloadText(base + '.json', JSON.stringify(state.data, null, 2));
+  }
+  toast('已导出', 'ok');
+}
+
+async function varsDialog() {
+  const body = h('div');
+  body.appendChild(h('p', null,
+    '变量在发送前替换 ', h('code', null, '{{名字}}'), '，可以用在地址、参数、请求头、请求体里。'));
+  body.appendChild(h('p', { class: 'hint' },
+    '内置动态值：{{$timestamp}} 秒级时间戳 · {{$isoTimestamp}} ISO 时间 · {{$guid}} UUID · {{$randomInt}} 随机数'));
+
+  const scopeSel = h('select', { class: 'textInput', style: 'height:32px' });
+  scopeSel.appendChild(h('option', { value: '' }, '全局（所有集合都能用）'));
+  for (const c of state.data.collections) {
+    scopeSel.appendChild(h('option', { value: c.id }, '集合：' + c.name));
+  }
+  scopeSel.value = state.lastCollectionId && state.data.collections.some((c) => c.id === state.lastCollectionId)
+    ? state.lastCollectionId : '';
+
+  const box = h('div', { style: 'margin-top:10px' });
+  const hint = h('div', { class: 'hint', style: 'margin-top:8px' });
+  const rowsOf = () => {
+    const cid = scopeSel.value;
+    if (!cid) return state.data.variables;
+    const c = state.data.collections.find((x) => x.id === cid);
+    return c ? c.variables : state.data.variables;
+  };
+  const repaint = () => {
+    clear(box);
+    const fake = h('div');
+    kvEditor(fake, rowsOf(), () => { repaint(); }, 'key', 'value');
+    box.appendChild(fake);
+    hint.textContent = scopeSel.value
+      ? '集合变量会盖过同名的全局变量。'
+      : '同名时集合里的变量优先。';
+  };
+  scopeSel.addEventListener('change', repaint);
+  repaint();
+
+  body.appendChild(h('div', { class: 'field', style: 'margin-top:12px' },
+    h('label', null, '作用域'), scopeSel));
+  body.appendChild(box);
+  body.appendChild(hint);
+
+  await modal({ title: '变量', body: body, actions: [{ label: '关闭', primary: true, value: true }] });
+  markDirty();
+  renderEditor();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   12. 模态 / 提示输入
+   ═══════════════════════════════════════════════════════════════════ */
+
+let activeModalClose = null;
+
+/** 从外面关掉当前模态（比如在弹窗里点了「去别处」） */
+function closeModal() {
+  const finish = activeModalClose;
+  activeModalClose = null;
+  if (finish) finish(null);
+}
+
+function modal(opts) {
+  return new Promise((resolve) => {
+    const host = $('#modalHost');
+    host.hidden = false;
+    clear(host);
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      if (activeModalClose === finish) activeModalClose = null;
+      host.hidden = true;
+      clear(host);
+      document.removeEventListener('keydown', onKey, true);
+      resolve(value);
+    };
+    activeModalClose = finish;
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); finish(opts.escapeValue === undefined ? null : opts.escapeValue); }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && opts.actions) {
+        const primary = opts.actions.filter((a) => a.primary)[0];
+        if (primary) { e.preventDefault(); finish(primary.value); }
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    const box = h('div', { class: 'modal' + (opts.wide ? ' wide' : '') },
+      h('div', { class: 'modalHead' },
+        h('b', null, opts.title || ''),
+        h('button', { class: 'x', onclick: () => finish(null) }, '✕')),
+      h('div', { class: 'modalBody' }, opts.body),
+      h('div', { class: 'modalFoot' }, (opts.actions || [{ label: '好', primary: true, value: true }]).map((a) => h('button', {
+        class: 'btn' + (a.primary ? ' primary' : '') + (a.danger ? ' danger' : ''),
+        onclick: () => finish(a.value)
+      }, a.label)))
+    );
+    host.appendChild(box);
+    host.onclick = (e) => { if (e.target === host) finish(null); };
+    const focusable = box.querySelector('input,textarea,select,button.primary');
+    if (focusable) setTimeout(() => focusable.focus(), 30);
+  });
+}
+
+/** 单行文本输入框，返回输入值或 null（取消） */
+function askText(title, value, placeholder) {
+  return new Promise((resolve) => {
+    const host = $('#modalHost');
+    host.hidden = false;
+    clear(host);
+    let done = false;
+    const input = h('input', { class: 'textInput', value: value || '', placeholder: placeholder || '' });
+    const close = (v) => {
+      if (done) return;
+      done = true;
+      host.hidden = true;
+      clear(host);
+      document.removeEventListener('keydown', onKey, true);
+      resolve(v);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close(null);
+      if (e.key === 'Enter' && e.target === input) close(input.value);
+    };
+    document.addEventListener('keydown', onKey, true);
+    host.appendChild(h('div', { class: 'modal' },
+      h('div', { class: 'modalHead' }, h('b', null, title), h('button', { class: 'x', onclick: () => close(null) }, '✕')),
+      h('div', { class: 'modalBody' }, input),
+      h('div', { class: 'modalFoot' },
+        h('button', { class: 'btn', onclick: () => close(null) }, '取消'),
+        h('button', { class: 'btn primary', onclick: () => close(input.value) }, '确定'))));
+    host.onclick = (e) => { if (e.target === host) close(null); };
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+  });
+}
+
+function askConfirm(title, message, okLabel) {
+  return modal({
+    title: title,
+    body: h('p', { text: message }),
+    actions: [
+      { label: '取消', value: false },
+      { label: okLabel || '确定', primary: true, danger: true, value: true }
+    ]
+  }).then((v) => v === true);
+}
+
+/* ── 数据文件（插件模式）── */
+
+function recentPaths() {
+  try {
+    const list = JSON.parse(localStorage.getItem('apihub.recent') || '[]');
+    return Array.isArray(list) ? list.filter((x) => typeof x === 'string') : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function pushRecentPath(path) {
+  if (!path) return;
+  try {
+    const list = recentPaths().filter((p) => p !== path);
+    list.unshift(path);
+    localStorage.setItem('apihub.recent', JSON.stringify(list.slice(0, 6)));
+  } catch (_) { /* 忽略 */ }
+}
+
+/** 「数据文件」对话框：看当前路径、换位置、另存为 */
+async function storageDialog() {
+  if (state.mode !== 'host') {
+    const choice = await modal({
+      title: '数据文件',
+      body: h('div', null,
+        h('p', null, '单网页模式没有固定位置：数据由浏览器文件 API 直接读写你选的那个文件。'),
+        h('p', { class: 'hint' }, '点下面的「打开文件」，选任意 .json 即可；保存时会写回同一个文件。')),
+      actions: [
+        { label: '取消', value: null },
+        { label: '另存为…', value: 'saveas' },
+        { label: '打开文件…', primary: true, value: 'open' }
+      ]
+    });
+    if (choice === 'open') void openLocalFile();
+    if (choice === 'saveas') await saveNow(false);
+    return;
+  }
+
+  const current = state.dataPath || (state.hostInfo ? state.hostInfo.dataFile : '');
+  const pathInput = h('input', {
+    class: 'textInput',
+    value: current,
+    placeholder: '绝对路径，或直接给个目录（自动补 api-hub.json）',
+    onkeydown: (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const btn = document.querySelector('#modalHost .modalFoot .primary');
+        if (btn) btn.click();
+      }
+    }
+  });
+
+  const recents = recentPaths().filter((p) => p !== current);
+  const body = h('div', null,
+    h('div', { class: 'field' },
+      h('label', null, '数据文件位置'),
+      h('div', { style: 'display:flex;gap:8px;align-items:center' }, pathInput)),
+    h('p', { class: 'hint' },
+      '绝对路径；只填目录也行（比如 D:\\我的接口），会自动补成 api-hub.json。'),
+    h('p', { class: 'hint' },
+      '选一个已存在的文件＝切换过去；选一个不存在的＝在那边新建，可以顺带把当前数据搬过去。'),
+    recents.length
+      ? h('div', { style: 'margin-top:8px' },
+        h('div', { class: 'hint', style: 'margin-bottom:4px' }, '最近用过'),
+        h('div', { class: 'chips' }, recents.map((p) => h('button', {
+          class: 'chip',
+          title: p,
+          onclick: () => { pathInput.value = p; }
+        }, shortPath(p)))))
+      : null
+  );
+
+  const choice = await modal({
+    title: '数据文件',
+    body: body,
+    actions: [
+      { label: '取消', value: null },
+      { label: '另存为…', value: 'saveas' },
+      { label: '切换到这个文件', primary: true, value: 'load' }
+    ]
+  });
+
+  if (choice === 'load') {
+    const path = normalizeDataPath(pathInput.value);
+    if (!path) return;
+    await loadHostPath(path, { ask: true });
+    return;
+  }
+  if (choice === 'saveas') await saveAsHost();
+}
+
+/** 把当前数据写到另一个位置，然后继续用那个文件 */
+async function saveAsHost() {
+  const input = await askText('另存到新位置', state.dataPath || '', '绝对路径，或直接给个目录');
+  if (input === null) return;
+  const path = normalizeDataPath(input);
+  if (!path) return;
+  if (path === state.dataPath) { toast('还是同一个文件'); return; }
+  try {
+    const probe = await hostFetch('/open', { path: path }, 'POST');
+    if (probe.exists) {
+      const count = probe.data && Array.isArray(probe.data.requests) ? probe.data.requests.length : 0;
+      const ok = await askConfirm('覆盖已有文件',
+        '那里已经有 ' + shortPath(path) + '（' + (probe.data ? count + ' 个接口' : '内容无法解析') + '）。\n' +
+        '确定用当前数据覆盖它？（原来的内容会没）', '覆盖');
+      if (!ok) return;
+    }
+  } catch (_) { /* 探测失败就当不存在，后面写的时候再报错 */ }
+  state.dataPath = path;
+  state.readOnlyBlock = false;
+  state.loaded = true;
+  pushRecentPath(path);
+  try { localStorage.setItem(LS_KEY.path, path); } catch (_) { /* 忽略 */ }
+  paintDirty();
+  await saveNow(false);
+}
+
+async function askDataPath(fallback) {
+  void fallback;
+  return storageDialog().then(() => state.dataPath);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   13. 主题 / 设置 / 帮助
+   ═══════════════════════════════════════════════════════════════════ */
+
+function applyTheme(theme) {
+  state.theme = theme || 'auto';
+  let actual = state.theme;
+  if (actual === 'auto') {
+    actual = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.dataset.theme = actual;
+  try { localStorage.setItem(LS_KEY.theme, state.theme); } catch (_) { /* 忽略 */ }
+}
+
+function initTheme() {
+  let saved = 'auto';
+  try { saved = localStorage.getItem(LS_KEY.theme) || 'auto'; } catch (_) { /* 忽略 */ }
+  applyTheme(saved);
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => { if (state.theme === 'auto') applyTheme('auto'); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+}
+
+function cycleTheme() {
+  const order = ['auto', 'light', 'dark'];
+  const at = order.indexOf(state.theme);
+  applyTheme(order[(at + 1) % order.length]);
+  toast('主题：' + ({ auto: '跟随系统', light: '浅色', dark: '深色' })[state.theme]);
+}
+
+async function helpDialog() {
+  const body = h('div');
+  body.appendChild(h('h4', null, '存储'));
+  body.appendChild(h('p', null,
+    '一个数据文件装多个集合：从 Postman 导出来的每个 collection 都会变成左侧的一个「集合」，可以一直往里加。'));
+  body.appendChild(h('p', null, state.mode === 'host'
+    ? '当前是插件模式：页面由 DeepSeek Harness 提供，数据写入下面这个 JSON 文件，请求也由本机代理发出（没有跨域限制，自签名证书也能过）。'
+    : '当前是单网页模式：数据只用浏览器文件 API 读写，请求由浏览器直接发出（跨域看目标服务是否放行）。'));
+  if (state.mode === 'host') {
+    body.appendChild(h('div', { class: 'pathBox' },
+      h('code', null, state.dataPath || '（未选择）'),
+      h('button', {
+        class: 'btn',
+        onclick: () => { closeModal(); void storageDialog(); }
+      }, '更改位置…')));
+    body.appendChild(h('p', { class: 'hint' },
+      '想让数据放到别的盘/别的文件夹：点「更改位置…」，填绝对路径或直接填目录都行。'
+      + '顶部那条路径也能点。'));
+  } else {
+    body.appendChild(h('p', { class: 'hint' },
+      '点「打开」选择任意 .json 当数据文件，之后每次改动都会写回同一个文件（浏览器会要求一次授权）。'
+      + '首次保存会弹出「另存为」，选好位置即可。'));
+  }
+  body.appendChild(h('h4', null, '自动保存'));
+  const autoBox = h('input', { type: 'checkbox', checked: state.autoSave });
+  autoBox.addEventListener('change', () => {
+    state.autoSave = autoBox.checked;
+    try { localStorage.setItem(LS_KEY.auto, state.autoSave ? '1' : '0'); } catch (_) { /* 忽略 */ }
+    if (state.autoSave) scheduleSave();
+  });
+  body.appendChild(h('label', { style: 'display:flex;align-items:center;gap:7px' }, autoBox, '有改动时自动写盘（1.2 秒防抖）'));
+
+  body.appendChild(h('h4', null, '主题'));
+  body.appendChild(h('div', { style: 'display:flex;gap:8px' }, ['auto', 'light', 'dark'].map((t) => h('button', {
+    class: 'btn', onclick: () => applyTheme(t), style: 'font-size:11.5px'
+  }, ({ auto: '跟随系统', light: '浅色', dark: '深色' })[t]))));
+
+  body.appendChild(h('h4', null, '响应'));
+  body.appendChild(h('p', { class: 'hint' },
+    'JSON 默认按树显示，点一行展开/收起；「文本」页是格式化后带高亮的原文。'
+    + ' XML/HTML 会自动缩进，其它内容原样显示。响应区右上角「⤢ 放大」可以把请求编辑区收起来。'));
+
+  body.appendChild(h('h4', null, '快捷键'));
+  body.appendChild(h('div', { class: 'kbdList' },
+    h('kbd', null, 'Ctrl + Enter'), h('span', null, '发送当前接口'),
+    h('kbd', null, 'Ctrl + S'), h('span', null, '保存'),
+    h('kbd', null, 'Ctrl + N'), h('span', null, '新建接口'),
+    h('kbd', null, 'Ctrl + K'), h('span', null, '聚焦搜索'),
+    h('kbd', null, '↑ / ↓'), h('span', null, '在接口间移动'),
+    h('kbd', null, 'Ctrl + ,'), h('span', null, '打开本帮助')));
+
+  body.appendChild(h('h4', null, '关于'));
+  body.appendChild(h('p', { class: 'hint' },
+    'API-HUB 是一个单文件网页：Postman Collection v2.1 导入 + 接口调用 + 本地 JSON 存盘。'
+    + '同一份 index.html 既能单独打开，也由 DSH 插件在左侧栏「API-HUB」里加载。'));
+
+  await modal({ title: '帮助与设置', body: body, wide: true, actions: [{ label: '关闭', primary: true, value: true }] });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   14. 快捷键与事件绑定
+   ═══════════════════════════════════════════════════════════════════ */
+
+function folderPathOf(folderId) {
+  const names = [];
+  const byId = new Map(state.data.folders.map((f) => [f.id, f]));
+  let cur = folderId;
+  let guard = 0;
+  while (cur && guard++ < 64) {
+    const folder = byId.get(cur);
+    if (!folder) break;
+    names.unshift(folder.name);
+    cur = folder.parentId;
+  }
+  return names.join(' / ');
+}
+
+function visibleRequests() {
+  const q = state.query.trim().toLowerCase();
+  if (!q) return state.data.requests;
+  return state.data.requests.filter((r) =>
+    r.name.toLowerCase().indexOf(q) >= 0 ||
+    str(r.url).toLowerCase().indexOf(q) >= 0 ||
+    r.method.toLowerCase().indexOf(q) >= 0 ||
+    collectionName(r.collectionId).toLowerCase().indexOf(q) >= 0 ||
+    folderPathOf(r.folderId).toLowerCase().indexOf(q) >= 0);
+}
+
+function moveSelection(delta) {
+  const rows = visibleRequests();
+  if (!rows.length) return;
+  let at = rows.findIndex((r) => r.id === state.selectedId);
+  if (at < 0) at = 0;
+  const next = clamp(at + delta, 0, rows.length - 1);
+  selectRequest(rows[next].id);
+  const list = $('#list');
+  const buttons = list ? list.querySelectorAll('.req') : [];
+  const target = buttons[next];
+  if (target && target.scrollIntoView) target.scrollIntoView({ block: 'nearest' });
+}
+
+function bindKeys() {
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable);
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'enter') { e.preventDefault(); void doSend(); return; }
+    if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); void saveNow(false); return; }
+    if (mod && e.key.toLowerCase() === 'n') { e.preventDefault(); addRequest(); return; }
+    if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); $('#q').select(); return; }
+    if (mod && e.key === ',') { e.preventDefault(); void helpDialog(); return; }
+    if (typing) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1); }
+    else if (e.key === 'Enter' && state.selectedId) { e.preventDefault(); void doSend(); }
+    else if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
+  });
+}
+
+/**
+ * 面板被切走或标签页要关时，把还没落盘的改动挤出去。
+ * 插件模式下用 sendBeacon —— 页面随时会死，await 一个 fetch 不一定来得及。
+ */
+function flushOnExit() {
+  if (!state.dirty || state.saving) return;
+  if (state.mode !== 'host' || !state.dataPath) return;
+  if (state.readOnlyBlock) return;
+  try {
+    const payload = JSON.stringify({ path: state.dataPath, data: state.data });
+    const sent = navigator.sendBeacon(HOST_BASE + '/save', new Blob([payload], { type: 'application/json' }));
+    if (sent) {
+      state.dirty = false;
+      paintDirty();
+    }
+  } catch (_) {
+    /* 尽力而为 */
+  }
+}
+
+function bindChrome() {
+  $('#btnOpen').addEventListener('click', () => {
+    if (state.mode === 'host') void storageDialog();
+    else void openLocalFile();
+  });
+  // 顶部那条路径也能点：换存储位置 / 另存为
+  $('#pathLabel').addEventListener('click', () => void storageDialog());
+  $('#btnSave').addEventListener('click', () => void saveNow(false));
+  $('#btnImport').addEventListener('click', () => void importDialog());
+  $('#btnExport').addEventListener('click', () => void exportDialog());
+  $('#btnVars').addEventListener('click', () => void varsDialog());
+  $('#btnTheme').addEventListener('click', () => cycleTheme());
+  $('#btnHelp').addEventListener('click', () => void helpDialog());
+  $('#btnNewReq').addEventListener('click', () => addRequest());
+  $('#btnNewFolder').addEventListener('click', () => void addFolder());
+  $('#btnNewCollection').addEventListener('click', () => {
+    const c = newCollection();
+    void renameCollection(c);
+  });
+  $('#btnCollapse').addEventListener('click', () => {
+    const anyOpen = Object.keys(state.openCollections).some((k) => state.openCollections[k] !== false);
+    state.openCollections = {};
+    state.openFolders = {};
+    if (anyOpen) {
+      for (const c of state.data.collections) state.openCollections[c.id] = false;
+      for (const f of state.data.folders) state.openFolders[f.id] = false;
+    }
+    persistOpenFolders();
+    renderSidebar();
+  });
+  $('#q').addEventListener('input', (e) => { state.query = e.target.value; renderSidebar(); });
+
+  // 拖到列表空白处：集合 → 放到最后；接口 → 放到本列表最后一个接口后面
+  const listEl = $('#list');
+  const overRow = (e) => (e.target && e.target.closest ? e.target.closest('.req, .folder, .collection') : null);
+  listEl.addEventListener('dragover', (e) => {
+    if (!dragState) return;
+    if (overRow(e)) { listEl.classList.remove('drop-end'); return; }
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    listEl.classList.add('drop-end');
+  });
+  listEl.addEventListener('dragleave', (e) => {
+    if (e.target === listEl) listEl.classList.remove('drop-end');
+  });
+  listEl.addEventListener('drop', (e) => {
+    listEl.classList.remove('drop-end');
+    if (!dragState || overRow(e)) return;
+    e.preventDefault();
+    const dragged = dragState;
+    dragState = null;
+    clearDropHints();
+    if (dragged.type === 'collection') {
+      const last = state.data.collections[state.data.collections.length - 1];
+      if (last) reorderCollection(dragged.id, last.id, 'after');
+      return;
+    }
+    // 接口：放到当前最后一行之后（同一个父级）
+    const rows = [...listEl.querySelectorAll('.req')];
+    const tail = rows[rows.length - 1];
+    if (!tail) return;
+    const target = state.data.requests.find((r) => r.id === tail.dataset.id);
+    if (target) moveRequestTo(dragged.id, { id: target.id, collectionId: target.collectionId, folderId: target.folderId }, 'after');
+  });
+
+  // 拖文件进窗口
+  let dragDepth = 0;
+  window.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer || Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') < 0) return;
+    dragDepth++;
+    document.body.style.outline = '2px dashed var(--accent)';
+    document.body.style.outlineOffset = '-6px';
+  });
+  window.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) { document.body.style.outline = ''; }
+  });
+  window.addEventListener('dragover', (e) => { e.preventDefault(); });
+  window.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dragDepth = 0;
+    document.body.style.outline = '';
+    const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+    if (!files.length) {
+      const text = e.dataTransfer && e.dataTransfer.getData('text/plain');
+      if (text && text.trim()) {
+        try { await doImport(JSON.parse(text)); }
+        catch (err) { toast('粘贴的内容不是合法 JSON：' + err.message, 'bad'); }
+      }
+      return;
+    }
+    // 多选多个 collection：逐个建成新集合
+    if (files.length === 1) {
+      adoptFile(null, files[0].name, await files[0].text());
+      return;
+    }
+    let added = 0;
+    const failed = [];
+    for (const file of files) {
+      try {
+        added += Number(await doImport(JSON.parse(await file.text()), { sameName: 'new' })) || 0;
+      } catch (err) {
+        failed.push(file.name);
+      }
+    }
+    if (failed.length) toast('有 ' + failed.length + ' 个文件没导入：' + failed.slice(0, 3).join('、'), 'bad');
+    else toast('已导入 ' + files.length + ' 个集合，新增 ' + added + ' 个接口', 'ok');
+  });
+
+  // 面板被切走 / 关标签页时，把没落盘的改动挤出去
+  window.addEventListener('pagehide', flushOnExit);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushOnExit();
+  });
+
+  // 关页前提醒（插件模式下用 sendBeacon 兜底，不弹窗，免得挡住切换）
+  window.addEventListener('beforeunload', (e) => {
+    if (state.mode === 'file' && state.dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // 宿主主题
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'apihub:theme' && (d.theme === 'light' || d.theme === 'dark')) {
+      applyTheme(d.theme);
+    }
+  });
+  try {
+    if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'apihub:ready' }, '*');
+  } catch (_) { /* 忽略 */ }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   15. 启动
+   ═══════════════════════════════════════════════════════════════════ */
+
+/** 左侧栏拖动改宽度：拖一次记住，双击回到默认 240。 */
+function initSideResize() {
+  const handle = $('#sideDrag');
+  const side = document.querySelector('.side');
+  if (!handle || !side) return;
+  const KEY = LS_KEY.side;
+  const apply = (w) => {
+    const v = Math.round(clamp(w, 180, Math.max(200, window.innerWidth * 0.55)));
+    document.documentElement.style.setProperty('--side-w', v + 'px');
+    try { localStorage.setItem(KEY, String(v)); } catch (_) { /* 忽略 */ }
+  };
+  try {
+    const saved = Number(localStorage.getItem(KEY));
+    if (saved) apply(saved);
+  } catch (_) { /* 忽略 */ }
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handle.classList.add('on');
+    const startX = e.clientX;
+    const startW = side.getBoundingClientRect().width;
+    const move = (ev) => apply(startW + (ev.clientX - startX));
+    const up = () => {
+      handle.classList.remove('on');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
+  handle.addEventListener('dblclick', () => apply(240));
+}
+
+async function boot() {
+  initTheme();
+  bindChrome();
+  bindKeys();
+  initSideResize();
+  try { state.respFocus = localStorage.getItem('apihub.respFocus') === '1'; } catch (_) { /* 忽略 */ }
+  if (state.respFocus) {
+    const pane = document.querySelector('.pane');
+    if (pane) pane.classList.add('respFocus');
+  }
+  try {
+    const saved = localStorage.getItem(LS_KEY.open);
+    if (saved) state.openFolders = JSON.parse(saved) || {};
+  } catch (_) { /* 忽略 */ }
+  try {
+    const saved = localStorage.getItem(LS_KEY.openCollections);
+    if (saved) state.openCollections = JSON.parse(saved) || {};
+  } catch (_) { /* 忽略 */ }
+  try {
+    state.autoSave = localStorage.getItem(LS_KEY.auto) !== '0';
+    state.respView = localStorage.getItem('apihub.respView') === 'raw' ? 'raw' : 'tree';
+  } catch (_) { /* 忽略 */ }
+
+  const info = await detectHost();
+  if (info) {
+    await bootHost(info);
+  } else {
+    state.mode = 'file';
+    $('#modeTag').textContent = '单网页';
+    paintDirty();
+    renderSidebar();
+    renderEditor();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => { void boot(); }, { once: true });
+} else {
+  void boot();
+}
+
+})();
+</script>
+</body>
+</html>

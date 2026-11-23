@@ -1,0 +1,12 @@
+{
+  "info": { "name": "订单服务", "description": "第二个示例集合：和 API-HUB 示例接口共用一个数据文件", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "variable": [ { "key": "baseUrl", "value": "http://127.0.0.1:8798" } ],
+  "item": [
+    { "name": "订单", "item": [
+      { "name": "订单详情", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/json" } },
+      { "name": "创建订单", "request": { "method": "POST", "header": [], "body": { "mode": "raw", "raw": "{\"sku\":\"A-1\",\"count\":2}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/echo" } }
+    ]},
+    { "name": "上传附件", "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [ { "key": "note", "value": "随包说明", "type": "text" }, { "key": "file", "type": "file", "src": "demo.txt" } ] }, "url": "{{baseUrl}}/echo" } },
+    { "name": "健康检查", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/text" } }
+  ]
+}

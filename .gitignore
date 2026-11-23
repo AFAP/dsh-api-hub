@@ -1,0 +1,23 @@
+# dependencies / build output
+node_modules/
+dist/
+build/
+*.exe
+*.log
+
+# local preview data (demo collections written by `npm run preview`)
+.preview/
+
+# secrets and local environment
+.env
+.env.*
+*.pem
+*.key
+credentials*
+.credentials.yaml
+
+# editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

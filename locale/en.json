@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "API-HUB API console",
+    "description": "Opens a Postman-style API console from the sidebar: import Postman collections, send requests through a local proxy without CORS limits, and keep every collection in one local JSON file. The same page also opens on its own as a fallback."
+  }
+}

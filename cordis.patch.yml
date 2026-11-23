@@ -1,0 +1,6 @@
+# dsh-api-hub bundle patch: inserts the API-HUB row (Host half + Client half)
+# into the web profile composition. The Host half serves /api-hub and proxies
+# requests; the Client half adds the sidebar entry and the center panel.
+- insert:
+    - id: dsh-api-hub
+      name: dsh-api-hub
