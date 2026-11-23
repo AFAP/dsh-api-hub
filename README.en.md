@@ -42,10 +42,6 @@ The left pane lists collections, folders and requests. The right top area holds 
 ### 4.1 Install into DeepSeek Harness (recommended)
 
 ```powershell
-# Remove the old local link first, so the sidebar does not show two API-HUB entries
-dsh plugin --profile web remove @local/api-hub
-
-# Install from GitHub
 dsh plugin --profile web add github:AFAP/dsh-api-hub
 ```
 
@@ -221,9 +217,6 @@ dsh-api-hub/
 - **No cloud sync**: data lives only in the JSON file you choose.
 
 ## 11. FAQ
-
-**Q: The sidebar shows two API-HUB entries.**  
-A: The old local link is still installed. Run `dsh plugin --profile web remove @local/api-hub` and restart `dsh web`.
 
 **Q: Installed, but no sidebar entry.**  
 A: Restart `dsh web` first, then confirm `dsh-api-hub` is enabled on the Plugins page.

@@ -45,10 +45,6 @@ API-HUB 把「导进来、点发送、看结果」这三件事塞进 DSH 的侧�
 ### 4.1 装进 DeepSeek Harness（推荐）
 
 ```powershell
-# 如果之前装过本地链接版，先移除，免得侧栏出现两个 API-HUB
-dsh plugin --profile web remove @local/api-hub
-
-# 从 GitHub 安装
 dsh plugin --profile web add github:AFAP/dsh-api-hub
 ```
 
@@ -229,9 +225,6 @@ dsh-api-hub/
 - **不做云同步**：数据只在你指定的那个 JSON 文件里。
 
 ## 11. 常见问题
-
-**Q：侧栏出现两个 API-HUB？**  
-A：旧的本地链接版还在，执行 `dsh plugin --profile web remove @local/api-hub`，再重启 `dsh web`。
 
 **Q：装了但侧栏没出现？**  
 A：先重启 `dsh web`；再确认 Plugins 里 `dsh-api-hub` 已启用。
